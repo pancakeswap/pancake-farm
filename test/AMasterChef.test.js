@@ -9,6 +9,7 @@ contract('MasterChef', ([alice, bob, carol, dev, minter]) => {
     });
 
     it('should set correct state variables', async () => {
+      console.log(dev)
         this.chef = await MasterChef.new(this.sushi.address, dev, '1000', '0', '1000', { from: alice });
         await this.sushi.transferOwnership(this.chef.address, { from: alice });
         const sushi = await this.chef.sushi();

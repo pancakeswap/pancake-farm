@@ -11,5 +11,6 @@ contract MockERC20 is ERC20 {
         uint256 supply
     ) public ERC20(name, symbol) {
         _mint(msg.sender, supply);
+
     }
 }
