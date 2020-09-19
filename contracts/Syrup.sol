@@ -4,13 +4,22 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
+import "./MasterChef.sol";
 
-contract SushiBar is ERC20("SushiBar", "xCAKE"){
+
+contract SYRUP is ERC20("SYRUP Token", "SYRUP"){
     using SafeMath for uint256;
     IERC20 public cake;
 
-    constructor(IERC20 _cake) public {
+    MasterChef public chef;
+
+    uint256 public poolId;
+
+
+    constructor(IERC20 _cake, MasterChef _chef, uint256 _pid) public {
         cake = _cake;
+        chef = _chef;
+        poolId = _pid;
     }
 
     // Enter the bar. Pay some CAKEs. Earn some shares.
@@ -24,6 +33,7 @@ contract SushiBar is ERC20("SushiBar", "xCAKE"){
             _mint(msg.sender, what);
         }
         cake.transferFrom(msg.sender, address(this), _amount);
+        chef.deposit(poolId, _amount)
     }
 
     // Leave the bar. Claim back your CAKEs.
@@ -31,6 +41,8 @@ contract SushiBar is ERC20("SushiBar", "xCAKE"){
         uint256 totalShares = totalSupply();
         uint256 what = _share.mul(cake.balanceOf(address(this))).div(totalShares);
         _burn(msg.sender, _share);
-        cake.transfer(msg.sender, what);
+        uint256 cakeReward = chef.getPendingSushi(poolId, address(this), _share) + _share
+        chef.withdraw(poolId, _share);
+        cake.transfer(msg.sender, cakeReward);
     }
 }

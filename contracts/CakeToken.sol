@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 
 // CakeToken with Governance.
-contract CakeToken is ERC20("CakeToken", "CAKE"), Ownable {
+contract CakeToken is ERC20("TS1 Token", "TS1"), Ownable {
     /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (MasterChef).
     function mint(address _to, uint256 _amount) public onlyOwner {
         _mint(_to, _amount);

@@ -102,6 +102,7 @@ contract MasterChef is Ownable {
         return poolInfo.length;
     }
 
+
     // Add a new lp to the pool. Can only be called by the owner.
     // XXX DO NOT add the same LP token more than once. Rewards will be messed up if you do.
     function add(uint256 _allocPoint, IERC20 _lpToken, bool _withUpdate) public onlyOwner {
