@@ -16,7 +16,7 @@ https://pancakeswap.finance. Feel free to read the code. More details coming soo
 
 ### BSCMAINNET
 
-- CakeToken - https://bscscan.com/token/0x7d813C828b0d1083Bb08b38841C45304A920060b
+- CakeToken - https://bscscan.com/token/
 - MasterChef - https://bscscan.com/address/
 - (Uni|Cake)swapV2Factory - https://bscscan.com/address/0xBCfCcbde45cE874adCB698cC183deBcF17952812
 - (Uni|Cake)swapV2Router02 - https://bscscan.com/address/0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F
