@@ -65,12 +65,10 @@ contract MasterChef is Ownable {
     SyrupBar public syrup;
     // Dev address.
     address public devaddr;
-    // Block number when bonus CAKE period ends.
-    uint256 public bonusEndBlock;
     // CAKE tokens created per block.
     uint256 public cakePerBlock;
     // Bonus muliplier for early cake makers.
-    uint256 public constant BONUS_MULTIPLIER = 1;
+    uint256 public BONUS_MULTIPLIER = 1;
     // The migrator contract. It has a lot of power. Can only be set through governance (owner).
     IMigratorChef public migrator;
 
@@ -92,14 +90,12 @@ contract MasterChef is Ownable {
         SyrupBar _syrup,
         address _devaddr,
         uint256 _cakePerBlock,
-        uint256 _startBlock,
-        uint256 _bonusEndBlock
+        uint256 _startBlock
     ) public {
         cake = _cake;
         syrup = _syrup;
         devaddr = _devaddr;
         cakePerBlock = _cakePerBlock;
-        bonusEndBlock = _bonusEndBlock;
         startBlock = _startBlock;
 
         // staking pool
@@ -112,6 +108,10 @@ contract MasterChef is Ownable {
 
         totalAllocPoint = 1000;
 
+    }
+
+    function updateMultiplier(uint256 multiplierNumber) public onlyOwner {
+        BONUS_MULTIPLIER = multiplierNumber;
     }
 
     function poolLength() external view returns (uint256) {
@@ -148,7 +148,7 @@ contract MasterChef is Ownable {
         }
     }
 
-    function updateStakingPool() public {
+    function updateStakingPool() internal {
         uint256 length = poolInfo.length;
         uint256 points = 0;
         for (uint256 pid = 1; pid < length; ++pid) {
@@ -180,15 +180,7 @@ contract MasterChef is Ownable {
 
     // Return reward multiplier over the given _from to _to block.
     function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
-        if (_to <= bonusEndBlock) {
-            return _to.sub(_from).mul(BONUS_MULTIPLIER);
-        } else if (_from >= bonusEndBlock) {
-            return _to.sub(_from);
-        } else {
-            return bonusEndBlock.sub(_from).mul(BONUS_MULTIPLIER).add(
-                _to.sub(bonusEndBlock)
-            );
-        }
+        return _to.sub(_from).mul(BONUS_MULTIPLIER);
     }
 
     // View function to see pending CAKEs on frontend.

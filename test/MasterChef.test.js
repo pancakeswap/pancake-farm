@@ -11,7 +11,7 @@ contract('MasterChef', ([alice, bob, carol, dev, minter]) => {
         this.lp1 = await MockBEP20.new('LPToken', 'LP1', '1000', { from: alice });
         this.lp2 = await MockBEP20.new('LPToken', 'LP2', '1000', { from: alice });
         this.lp3 = await MockBEP20.new('LPToken', 'LP3', '1000', { from: alice });
-        this.chef = await MasterChef.new(this.cake.address, this.syrup.address, dev, '1000', '300', '1000', { from: alice });
+        this.chef = await MasterChef.new(this.cake.address, this.syrup.address, dev, '1000', '300', { from: alice });
         await this.cake.transferOwnership(this.chef.address, { from: alice });
         await this.syrup.transferOwnership(this.chef.address, { from: alice });
         await this.chef.add('1000', this.lp1.address, true);
