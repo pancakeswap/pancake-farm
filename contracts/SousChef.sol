@@ -18,7 +18,7 @@ contract SousChef {
         uint256 rewardPending;
     }
 
-    // Info of each pool.
+    // Info of Pool
     struct PoolInfo {
         uint256 lastRewardBlock;  // Last block number that Rewards distribution occurs.
         uint256 accRewardPerShare; // Accumulated reward per share, times 1e12. See below.
@@ -26,17 +26,14 @@ contract SousChef {
 
     // The SYRUP TOKEN!
     IBEP20 public syrup;
-    // Dev address.
-    address public devaddr;
-    // IDO tokens created per block.
+    // rewards created per block.
     uint256 public rewardPerBlock;
 
-    // Info of each pool.
+    // Info.
     PoolInfo public poolInfo;
     // Info of each user that stakes Syrupg tokens.
     mapping (address => UserInfo) public userInfo;
-    // Total allocation poitns. Must be the sum of all allocation points in all pools.
-    uint256 public totalAllocPoint = 0;
+
     // The block number when mining starts.
     uint256 public startBlock;
     // The block number when mining ends.
@@ -91,34 +88,32 @@ contract SousChef {
 
     // Update reward variables of the given pool to be up-to-date.
     function updatePool() public {
-        PoolInfo storage pool = poolInfo;
-        if (block.number <= pool.lastRewardBlock) {
+        if (block.number <= poolInfo.lastRewardBlock) {
             return;
         }
         uint256 syrupSupply = syrup.balanceOf(address(this));
         if (syrupSupply == 0) {
-            pool.lastRewardBlock = block.number;
+            poolInfo.lastRewardBlock = block.number;
             return;
         }
-        uint256 multiplier = getMultiplier(pool.lastRewardBlock, block.number);
+        uint256 multiplier = getMultiplier(poolInfo.lastRewardBlock, block.number);
         uint256 tokenReward = multiplier.mul(rewardPerBlock);
 
-        pool.accRewardPerShare = pool.accRewardPerShare.add(tokenReward.mul(1e12).div(syrupSupply));
-        pool.lastRewardBlock = block.number;
+        poolInfo.accRewardPerShare = poolInfo.accRewardPerShare.add(tokenReward.mul(1e12).div(syrupSupply));
+        poolInfo.lastRewardBlock = block.number;
     }
 
     // Deposit Syrup tokens to SousChef for Reward allocation.
     function deposit(uint256 _amount) public {
         require (_amount > 0, 'amount 0');
-        PoolInfo storage pool = poolInfo;
         UserInfo storage user = userInfo[msg.sender];
 
         updatePool();
         syrup.safeTransferFrom(address(msg.sender), address(this), _amount);
 
-        user.rewardPending = user.amount.mul(pool.accRewardPerShare).div(1e12).sub(user.rewardDebt).add(user.rewardPending);
+        user.rewardPending = user.amount.mul(poolInfo.accRewardPerShare).div(1e12).sub(user.rewardDebt).add(user.rewardPending);
         user.amount = user.amount.add(_amount);
-        user.rewardDebt = user.amount.mul(pool.accRewardPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(poolInfo.accRewardPerShare).div(1e12);
 
         emit Deposit(msg.sender, _amount);
     }
@@ -126,23 +121,21 @@ contract SousChef {
     // Withdraw Syrup tokens from SousChef.
     function withdraw(uint256 _amount) public {
         require (_amount > 0, 'amount 0');
-        PoolInfo storage pool = poolInfo;
         UserInfo storage user = userInfo[msg.sender];
         require(user.amount >= _amount, "withdraw: not enough");
 
         updatePool();
         syrup.safeTransfer(address(msg.sender), _amount);
 
-        user.rewardPending = user.amount.mul(pool.accRewardPerShare).div(1e12).sub(user.rewardDebt).add(user.rewardPending);
+        user.rewardPending = user.amount.mul(poolInfo.accRewardPerShare).div(1e12).sub(user.rewardDebt).add(user.rewardPending);
         user.amount = user.amount.sub(_amount);
-        user.rewardDebt = user.amount.mul(pool.accRewardPerShare).div(1e12);
+        user.rewardDebt = user.amount.mul(poolInfo.accRewardPerShare).div(1e12);
 
         emit Withdraw(msg.sender, _amount);
     }
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
     function emergencyWithdraw() public {
-        PoolInfo storage pool = poolInfo;
         UserInfo storage user = userInfo[msg.sender];
         syrup.safeTransfer(address(msg.sender), user.amount);
         emit EmergencyWithdraw(msg.sender, user.amount);
