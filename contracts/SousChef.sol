@@ -20,8 +20,8 @@ contract SousChef {
 
     // Info of each pool.
     struct PoolInfo {
-        uint256 lastRewardBlock;  // Last block number that CAKEs distribution occurs.
-        uint256 accRewardPerShare; // Accumulated CAKEs per share, times 1e12. See below.
+        uint256 lastRewardBlock;  // Last block number that Rewards distribution occurs.
+        uint256 accRewardPerShare; // Accumulated reward per share, times 1e12. See below.
     }
 
     // The SYRUP TOKEN!
@@ -33,13 +33,13 @@ contract SousChef {
 
     // Info of each pool.
     PoolInfo public poolInfo;
-    // Info of each user that stakes LP tokens.
+    // Info of each user that stakes Syrupg tokens.
     mapping (address => UserInfo) public userInfo;
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
-    // The block number when IDO mining starts.
+    // The block number when mining starts.
     uint256 public startBlock;
-    // The block number when IDO mining ends.
+    // The block number when mining ends.
     uint256 public bonusEndBlock;
 
     event Deposit(address indexed user, uint256 amount);
@@ -107,7 +107,7 @@ contract SousChef {
         pool.lastRewardBlock = block.number;
     }
 
-    // Deposit LP tokens to MasterChef for CAKE allocation.
+    // Deposit Syrup tokens to SousChef for Reward allocation.
     function deposit(uint256 _amount) public {
         require (_amount > 0, 'amount 0');
         PoolInfo storage pool = poolInfo;
@@ -123,7 +123,7 @@ contract SousChef {
         emit Deposit(msg.sender, _amount);
     }
 
-    // Withdraw LP tokens from MasterChef.
+    // Withdraw Syrup tokens from SousChef.
     function withdraw(uint256 _amount) public {
         require (_amount > 0, 'amount 0');
         PoolInfo storage pool = poolInfo;
