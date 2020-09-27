@@ -62,27 +62,38 @@ contract('Timelock', ([alice, bob, carol, dev, minter]) => {
     });
 
     it('should also work with MasterChef', async () => {
-        // this.lp1 = await MockERC20.new('LPToken', 'LP', '10000000000', { from: minter });
-        // this.lp2 = await MockERC20.new('LPToken', 'LP', '10000000000', { from: minter });
-        // this.syrup = await SyrupBar.new(this.cake.address, { from: minter });
-        // this.chef = await MasterChef.new(this.cake.address, this.syrup.address, dev, '1000', '0', { from: alice });
-        // await this.cake.transferOwnership(this.chef.address, { from: alice });
-        // await this.chef.add('100', this.lp1.address, true);
-        // await this.chef.transferOwnership(this.timelock.address, { from: alice });
-        // const eta = (await time.latest()).add(time.duration.hours(6));
-        // await this.timelock.queueTransaction(
-        //     this.chef.address, '0', 'set(uint256,uint256,bool)',
-        //     encodeParameters(['uint256', 'uint256', 'bool'], ['0', '200', false]), eta, { from: bob },
-        // );
+        this.lp1 = await MockERC20.new('LPToken', 'LP', '10000000000', { from: minter });
+        this.lp2 = await MockERC20.new('LPToken', 'LP', '10000000000', { from: minter });
+        this.syrup = await SyrupBar.new(this.cake.address, { from: minter });
+        this.chef = await MasterChef.new(this.cake.address, this.syrup.address, dev, '1000', '0', { from: alice });
+        await this.cake.transferOwnership(this.chef.address, { from: alice });
+        await this.syrup.transferOwnership(this.chef.address, { from: minter });
+        await this.chef.add('100', this.lp1.address, true, { from: alice });
+        await this.chef.transferOwnership(this.timelock.address, { from: alice });
+        await expectRevert(
+            this.chef.add('100', this.lp1.address, true, { from: alice }),
+            "revert Ownable: caller is not the owner",
+        );
+
+        const eta = (await time.latest()).add(time.duration.hours(9));
+        await this.timelock.queueTransaction(
+            this.chef.address, '0', 'transferOwnership(address)',
+            encodeParameters(['address'], [minter]), eta, { from: bob },
+        );
         // await this.timelock.queueTransaction(
         //     this.chef.address, '0', 'add(uint256,address,bool)',
         //     encodeParameters(['uint256', 'address', 'bool'], ['100', this.lp2.address, false]), eta, { from: bob },
         // );
-        // await time.increase(time.duration.hours(6));
-        // await this.timelock.executeTransaction(
-        //     this.chef.address, '0', 'set(uint256,uint256,bool)',
-        //     encodeParameters(['uint256', 'uint256', 'bool'], ['0', '200', false]), eta, { from: bob },
-        // );
+        await time.increase(time.duration.hours(9));
+        await this.timelock.executeTransaction(
+            this.chef.address, '0', 'transferOwnership(address)',
+            encodeParameters(['address'], [minter]), eta, { from: bob },
+        );
+        await expectRevert(
+            this.chef.add('100', this.lp1.address, true, { from: alice }),
+            "revert Ownable: caller is not the owner",
+        );
+        await this.chef.add('100', this.lp1.address, true, { from: minter })
         // await this.timelock.executeTransaction(
         //     this.chef.address, '0', 'add(uint256,address,bool)',
         //     encodeParameters(['uint256', 'address', 'bool'], ['100', this.lp2.address, false]), eta, { from: bob },

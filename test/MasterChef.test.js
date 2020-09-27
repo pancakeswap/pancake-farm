@@ -11,7 +11,7 @@ contract('MasterChef', ([alice, bob, carol, dev, minter]) => {
         this.lp1 = await MockBEP20.new('LPToken', 'LP1', '1000000', { from: minter });
         this.lp2 = await MockBEP20.new('LPToken', 'LP2', '1000000', { from: minter });
         this.lp3 = await MockBEP20.new('LPToken', 'LP3', '1000000', { from: minter });
-        this.chef = await MasterChef.new(this.cake.address, this.syrup.address, dev, '1000', '300', { from: minter });
+        this.chef = await MasterChef.new(this.cake.address, this.syrup.address, dev, '1000', '100', { from: minter });
         await this.cake.transferOwnership(this.chef.address, { from: minter });
         await this.syrup.transferOwnership(this.chef.address, { from: minter });
 
@@ -40,7 +40,7 @@ contract('MasterChef', ([alice, bob, carol, dev, minter]) => {
       await this.chef.add('100', this.lp3.address, true, { from: minter });
       await this.chef.add('100', this.lp3.address, true, { from: minter });
 
-      await time.advanceBlockTo('300');
+      await time.advanceBlockTo('100');
       await this.lp1.approve(this.chef.address, '1000', { from: alice });
       assert.equal((await this.cake.balanceOf(alice)).toString(), '0');
       await this.chef.deposit(1, '20', { from: alice });
@@ -134,7 +134,7 @@ contract('MasterChef', ([alice, bob, carol, dev, minter]) => {
       assert.equal((await this.cake.balanceOf(alice)).toString(), '700');
       assert.equal((await this.cake.balanceOf(bob)).toString(), '150');
 
-      await time.advanceBlockTo('400');
+      await time.advanceBlockTo('200');
 
       await this.chef.enterStaking('0', { from: alice });
       await this.chef.enterStaking('0', { from: bob });
