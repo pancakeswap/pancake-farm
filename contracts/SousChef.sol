@@ -33,7 +33,7 @@ contract SousChef {
 
     // Info of each pool.
     PoolInfo public poolInfo;
-    // Info of each user that stakes Syrupg tokens.
+    // Info of each user that stakes Syrup tokens.
     mapping (address => UserInfo) public userInfo;
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
