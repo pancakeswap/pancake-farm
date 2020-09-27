@@ -34,6 +34,9 @@ contract SousChef {
     // Info of each user that stakes Syrup tokens.
     mapping (address => UserInfo) public userInfo;
 
+    // addresses list
+    address[] public addressList;
+
     // The block number when mining starts.
     uint256 public startBlock;
     // The block number when mining ends.
@@ -61,8 +64,12 @@ contract SousChef {
         });
     }
 
+    function addressLength() external view returns (uint256) {
+        return addressList.length;
+    }
+
     // Return reward multiplier over the given _from to _to block.
-    function getMultiplier(uint256 _from, uint256 _to) public view returns (uint256) {
+    function getMultiplier(uint256 _from, uint256 _to) internal view returns (uint256) {
         if (_to <= bonusEndBlock) {
             return _to.sub(_from);
         } else if (_from >= bonusEndBlock) {
@@ -110,6 +117,9 @@ contract SousChef {
 
         updatePool();
         syrup.safeTransferFrom(address(msg.sender), address(this), _amount);
+        if (userInfo[msg.sender].amount == 0) {
+            addressList.push(address(msg.sender));
+        }
 
         user.rewardPending = user.amount.mul(poolInfo.accRewardPerShare).div(1e12).sub(user.rewardDebt).add(user.rewardPending);
         user.amount = user.amount.add(_amount);

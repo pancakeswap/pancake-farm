@@ -80,6 +80,11 @@ contract('SousChef', ([alice, bob, carol, dev, minter]) => {
     assert.equal((await this.chef.pendingReward(carol, { from: alice })).toString(), '1915');
     await this.chef.withdraw('70', { from: carol });
     assert.equal((await this.syrup.balanceOf(this.chef.address)).toString(), '0');
+
+
+    console.log((await this.chef.addressLength()).toString())
+
+    console.log(await this.chef.addressList(1))
   })
 
   it('try syrup', async () => {
