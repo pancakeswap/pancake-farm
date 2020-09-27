@@ -31,7 +31,7 @@ contract SousChef {
 
     // Info.
     PoolInfo public poolInfo;
-    // Info of each user that stakes Syrupg tokens.
+    // Info of each user that stakes Syrup tokens.
     mapping (address => UserInfo) public userInfo;
 
     // The block number when mining starts.
