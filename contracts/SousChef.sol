@@ -117,7 +117,7 @@ contract SousChef {
 
         updatePool();
         syrup.safeTransferFrom(address(msg.sender), address(this), _amount);
-        if (userInfo[msg.sender].amount == 0) {
+        if (user.amount == 0 && user.rewardDebt == 0 && user.rewardPending ==0) {
             addressList.push(address(msg.sender));
         }
 
