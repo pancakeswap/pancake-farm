@@ -133,7 +133,7 @@ contract Lottery is Ownable {
         emit Buy(msg.sender, _amount, _numbers);
     }
 
-    function drawing() external returns (uint256){
+    function drawing() public {
         require(msg.sender == devaddr, "dev: wut?");
 
 
