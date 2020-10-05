@@ -8,144 +8,112 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./LotteryNFT.sol";
 
-import "@nomiclabs/buidler/console.sol";
+// import "@nomiclabs/buidler/console.sol";
 
+// 4 numbers
 contract Lottery is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public devaddr;
+    // Allocation for first/sencond/third reward
+    uint256[] private allocation = [60, 20, 10];
+    // The TOKEN to buy lottery
+    IERC20 public cake;
+    // The Lottery NFT for tickets
+    LotteryNFT public lotteryNtf;
+    // adminAddress
+    address public adminAddress;
+    // maxNumber
+    uint256 public maxNumber = 5;
 
-    uint256 public issueIndex;
+    // =================================
 
+    // issueId => winningNumbers[numbers]
+    mapping (uint256 => uint256[]) public historyNumbers;
+    // issueId => [tokenId]
+    mapping (uint256 => uint256[]) public lotteryInfo;
+    // address => [tokenId]
+    mapping (address => uint256[]) public userInfo;
+
+    uint256 public issueIndex = 0;
     uint256 public totalAddresses = 0;
     uint256 public totalAmount = 0;
     uint256 public lastTimestamp;
-    uint256 public maxNumber = 5;
 
-    uint256 private firstAllocation = 60;
-    uint256 private sencondAllocation = 20;
-    uint256 private thirdAllocation = 10;
-    uint256 private devAllocation = 10;
-
-    // Info of each lottery.
-    // TODO: ERC721
-    struct Lottery {
-        uint256 amount;
-        address owner;
-        uint256 lotteryNumber1;
-        uint256 lotteryNumber2;
-        uint256 lotteryNumber3;
-        uint256 lotteryNumber4;
-    }
-
-    // Reward
     uint256[] public winningNumbers;
-    Lottery[] public firstPrize;
-    Lottery[] public sencondPrize;
-    Lottery[] public thirdPrize;
 
-    uint256 public firstPrizeAmount;
-    uint256 public sencondPrizeAmount;
-    uint256 public thirdPrizeAmount;
+    // =================================
 
-    uint256[][] public historyNumbers;
-
-    // The SYRUP TOKEN!
-    IERC20 public cake;
-
-    LotteryNFT public lotteryNtf;
-
-    mapping (address => Lottery[]) public userInfo;
-    Lottery[] public lotteryInfo;
-
-    event Buy(address indexed user, uint256 _amount, uint256[] numbers);
-    event Drawing(uint256[] winningNumbers, uint256 firstPrizeNum);
-    event Claim(address indexed user, uint256 indexed tokenid, uint256 amount);
+    event Buy(address indexed user, uint256 tokenId);
+    event Drawing(uint256 indexed issueIndex, uint256[] winningNumbers);
+    event Claim(address indexed user, uint256 tokenid, uint256 amount);
+    event DevWithdraw(address indexed user, uint256 amount);
+    event Reset(uint256 indexed issueIndex);
 
     constructor(
         IERC20 _cake,
         LotteryNFT _lottery,
         uint256 _maxNumber,
-        address _devaddr
+        address _adminAddress
     ) public {
         cake = _cake;
         lotteryNtf = _lottery;
         maxNumber = _maxNumber;
-        devaddr = _devaddr;
+        adminAddress = _adminAddress;
         lastTimestamp = block.timestamp;
-        issueIndex = 0;
     }
+
+    uint256[] public nullTicket = [0,0,0,0];
 
     function reset() external {
+        require(msg.sender == adminAddress, "admin: wut?");
+        require(winningNumbers.length == 4, "drawed?");
+
         lastTimestamp = block.timestamp;
-        for (uint i = 0; i < lotteryInfo.length; i++) {
-            delete userInfo[lotteryInfo[i].owner];
-        }
-        delete lotteryInfo;
-        delete firstPrize;
-        delete sencondPrize;
-        delete thirdPrize;
+        totalAddresses = 0;
+        totalAmount = 0;
+        delete winningNumbers;
         issueIndex++;
+
+        if(getMatchingRewardAmount(issueIndex-1, 4) == 0) {
+            uint256 amount = getTotalRewards(issueIndex-1).mul(allocation[0]).div(100);
+            buy(amount, nullTicket);
+        }
+
+        emit Reset(issueIndex);
     }
 
-
     function buy(uint256 _amount, uint256[] memory _numbers) public {
-
         require (_numbers.length == 4, 'wrong length');
-
         for (uint i = 0; i < 4; i++) {
             require (_numbers[i] <= maxNumber, 'exceed the maximum');
         }
 
         cake.safeTransferFrom(address(msg.sender), address(this), _amount);
-
-        lotteryNtf.newLotteryItem(msg.sender, _numbers, _amount, issueIndex);
-
-        lotteryInfo.push(Lottery({
-            amount: _amount,
-            owner: address(msg.sender),
-            lotteryNumber1: _numbers[0],
-            lotteryNumber2: _numbers[1],
-            lotteryNumber3: _numbers[2],
-            lotteryNumber4: _numbers[3]
-        }));
-
-        Lottery[] storage userLotteries = userInfo[msg.sender];
-
+        uint256 tokenId = lotteryNtf.newLotteryItem(msg.sender, _numbers, _amount, issueIndex);
+        lotteryInfo[issueIndex].push(tokenId);
         if (userInfo[msg.sender].length == 0) {
             totalAddresses = totalAddresses + 1;
         }
-
-        userLotteries.push(Lottery({
-            amount: _amount,
-            owner: address(msg.sender),
-            lotteryNumber1: _numbers[0],
-            lotteryNumber2: _numbers[1],
-            lotteryNumber3: _numbers[2],
-            lotteryNumber4: _numbers[3]
-        }));
-
+        userInfo[msg.sender].push(tokenId);
         totalAmount = totalAmount + _amount;
-
         lastTimestamp = block.timestamp;
 
-        emit Buy(msg.sender, _amount, _numbers);
+        emit Buy(msg.sender, tokenId);
     }
 
     function drawing() public {
-        require(msg.sender == devaddr, "dev: wut?");
-
+        require(msg.sender == adminAddress, "admin: wut?");
 
         bytes32 _structHash;
         uint256 _randomNumber;
         uint256 _maxNumber = maxNumber;
-        bytes32 blockhash = blockhash(block.number-1);
+        bytes32 _blockhash = blockhash(block.number-1);
 
         // 1
         _structHash = keccak256(
             abi.encode(
-                blockhash,
+                _blockhash,
                 totalAddresses
             )
         );
@@ -153,11 +121,10 @@ contract Lottery is Ownable {
         assembly {_randomNumber := add(mod(_randomNumber, _maxNumber),1)}
         winningNumbers.push(_randomNumber);
 
-
         // 2
         _structHash = keccak256(
             abi.encode(
-                blockhash,
+                _blockhash,
                 totalAmount
             )
         );
@@ -165,11 +132,10 @@ contract Lottery is Ownable {
         assembly {_randomNumber := add(mod(_randomNumber, _maxNumber),1)}
         winningNumbers.push(_randomNumber);
 
-
         // 3
         _structHash = keccak256(
             abi.encode(
-                blockhash,
+                _blockhash,
                 lastTimestamp
             )
         );
@@ -180,7 +146,7 @@ contract Lottery is Ownable {
         // 4
         _structHash = keccak256(
             abi.encode(
-                blockhash,
+                _blockhash,
                 block.difficulty
             )
         );
@@ -189,77 +155,112 @@ contract Lottery is Ownable {
         winningNumbers.push(_randomNumber);
 
 
-        for (uint i = 0; i < lotteryInfo.length; i++) {
-            uint matchingNumber = 0;
-            if (lotteryInfo[i].lotteryNumber1 == winningNumbers[0]) {
-                matchingNumber = matchingNumber + 1;
-            }
-            if (lotteryInfo[i].lotteryNumber2 == winningNumbers[1]) {
-                matchingNumber = matchingNumber + 1;
-            }
-            if (lotteryInfo[i].lotteryNumber3 == winningNumbers[2]) {
-                matchingNumber = matchingNumber + 1;
-            }
-            if (lotteryInfo[i].lotteryNumber4 == winningNumbers[3]) {
-                matchingNumber = matchingNumber + 1;
-            }
+        historyNumbers[issueIndex] = winningNumbers;
 
-
-            if(matchingNumber == 4) {
-                firstPrize.push(lotteryInfo[i]);
-                firstPrizeAmount = firstPrizeAmount + lotteryInfo[i].amount;
-            }
-
-            if(matchingNumber == 3) {
-                sencondPrize.push(lotteryInfo[i]);
-                sencondPrizeAmount = sencondPrizeAmount + lotteryInfo[i].amount;
-            }
-
-            if(matchingNumber == 2) {
-                thirdPrize.push(lotteryInfo[i]);
-                thirdPrizeAmount = thirdPrizeAmount + lotteryInfo[i].amount;
-            }
-        }
-
-        historyNumbers.push(winningNumbers);
-
-        emit Drawing(winningNumbers, firstPrize.length);
+        emit Drawing(issueIndex, winningNumbers);
 
     }
 
-    function claimReward(uint256 tokenId) public {
-        require(msg.sender == lotteryNtf.ownerOf(tokenId), "not from owner");
-        require(issueIndex == lotteryNtf.getLotteryIndex(tokenId), "issue index wrong");
-        uint256[] memory lotteryNumber = lotteryNtf.getLotteryNumber(tokenId);
-        uint256 amount = lotteryNtf.getLotteryAmount(tokenId);
+    function getMatchingRewardAmount(uint256 _issueIndex, uint256 _matchingNumber) internal view returns (uint256) {
+        uint256 totalAmout = 0;
+        for (uint i = 0; i < lotteryInfo[_issueIndex].length; i++) {
+            uint256 tokenId = lotteryInfo[_issueIndex][i];
+
+            uint256[] memory lotteryNumbers = lotteryNtf.getLotteryNumbers(tokenId);
+            uint256[] storage _winningNumbers = historyNumbers[_issueIndex];
+            uint256 matchingNumber = 0;
+            for (uint j = 0; j < _winningNumbers.length; j++) {
+                if(lotteryNumbers[j] == _winningNumbers[j]) {
+                    matchingNumber++;
+                }
+            }
+            if (matchingNumber == _matchingNumber)  {
+                totalAmout = totalAmout + lotteryNtf.getLotteryAmount(tokenId);
+            }
+        }
+        return totalAmout;
+    }
+
+    function getMatchingLotteries(uint256 _issueIndex, uint256 _matchingNumber, uint256 _index) external view returns(uint256) {
+        uint256 index = 0;
+        for (uint i = 0; i < lotteryInfo[_issueIndex].length; i++) {
+            uint256 tokenId = lotteryInfo[_issueIndex][i];
+
+            uint256[] memory lotteryNumbers = lotteryNtf.getLotteryNumbers(tokenId);
+            uint256[] storage _winningNumbers = historyNumbers[_issueIndex];
+            uint256 matchingNumber = 0;
+            for (uint j = 0; j < _winningNumbers.length; j++) {
+                if (lotteryNumbers[j] == _winningNumbers[j]) {
+                    matchingNumber++;
+                }
+            }
+            if (matchingNumber == _matchingNumber)  {
+                if (index == _index) {
+                    return tokenId;
+                }
+                index++;
+            }
+        }
+        return index;
+    }
+
+    function getTotalRewards(uint256 _issueIndex) public view returns(uint256) {
+        uint256 total = 0;
+        for (uint i = 0; i < lotteryInfo[_issueIndex].length; i++) {
+            uint256 tokenId = lotteryInfo[_issueIndex][i];
+            total = total.add(lotteryNtf.getLotteryAmount(tokenId));
+        }
+        return total;
+    }
+
+    function getRewardView(uint256 _tokenId) public view returns(uint256) {
+
+        uint256 _issueIndex = lotteryNtf.getLotteryIssueIndex(_tokenId);
+        uint256[] memory lotteryNumbers = lotteryNtf.getLotteryNumbers(_tokenId);
+        uint256[] storage _winningNumbers = historyNumbers[_issueIndex];
+
         uint256 matchingNumber = 0;
-        for (uint i = 0; i < lotteryNumber.length; i++) {
-            if(winningNumbers[i] == lotteryNumber[i]) {
+        for (uint i = 0; i < lotteryNumbers.length; i++) {
+            if (_winningNumbers[i] == lotteryNumbers[i]) {
                 matchingNumber= matchingNumber +1;
             }
         }
-        uint256 reward;
-        if(matchingNumber==4)  {
-            reward = amount.div(firstPrizeAmount).mul(totalAmount).mul(firstAllocation).div(100);
-            cake.safeTransferFrom(address(this), address(msg.sender), reward);
-        }
-        if(matchingNumber==3)  {
-            reward = amount.div(firstPrizeAmount).mul(totalAmount).mul(firstAllocation).div(100);
-            cake.safeTransferFrom(address(this), address(msg.sender), reward);
-        }
-        if(matchingNumber==2)  {
-            reward = amount.div(firstPrizeAmount).mul(totalAmount).mul(firstAllocation).div(100);
-            cake.safeTransferFrom(address(this), address(msg.sender), reward);
+
+        uint256 reward = 0;
+        if (matchingNumber > 1) {
+            uint256 amount = lotteryNtf.getLotteryAmount(_tokenId);
+            uint256 poolAmount = getTotalRewards(_issueIndex).mul(allocation[4-matchingNumber]).div(100);
+            reward = amount.mul(1e12).div(getMatchingRewardAmount(_issueIndex, matchingNumber)).mul(poolAmount);
         }
 
-        emit Claim(msg.sender, tokenId, reward);
+        return reward.div(1e12);
+    }
+
+
+    function claimReward(uint256 _tokenId) public {
+        require(msg.sender == lotteryNtf.ownerOf(_tokenId), "not from owner");
+        require (lotteryNtf.getClaimStatus(_tokenId) == false, "claimed");
+
+        uint256 reward = getRewardView(_tokenId);
+
+        if(reward>0) {
+            cake.safeTransfer(address(msg.sender), reward);
+        }
+        lotteryNtf.claimReward(_tokenId);
+
+        emit Claim(msg.sender, _tokenId, reward);
 
     }
 
 
-    // Update dev address by the previous dev.
-    function dev(address _devaddr) public {
-        require(msg.sender == devaddr, "dev: wut?");
-        devaddr = _devaddr;
+    // Update admin address by the previous dev.
+    function dev(address _adminAddress) public onlyOwner {
+        adminAddress = _adminAddress;
+    }
+
+    // Withdraw without caring about rewards. EMERGENCY ONLY.
+    function devWithdraw(uint256 _amount) public onlyOwner {
+        cake.safeTransfer(address(msg.sender), _amount);
+        emit DevWithdraw(msg.sender, _amount);
     }
 }
