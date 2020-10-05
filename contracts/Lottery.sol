@@ -20,7 +20,7 @@ contract Lottery is Ownable {
     // The TOKEN to buy lottery
     IERC20 public cake;
     // The Lottery NFT for tickets
-    LotteryNFT public lotteryNtf;
+    LotteryNFT public lotteryNFT;
     // adminAddress
     address public adminAddress;
     // maxNumber
@@ -57,7 +57,7 @@ contract Lottery is Ownable {
         address _adminAddress
     ) public {
         cake = _cake;
-        lotteryNtf = _lottery;
+        lotteryNFT = _lottery;
         maxNumber = _maxNumber;
         adminAddress = _adminAddress;
         lastTimestamp = block.timestamp;
@@ -86,7 +86,7 @@ contract Lottery is Ownable {
             require (_numbers[i] <= maxNumber, 'exceed the maximum');
         }
         cake.safeTransferFrom(address(msg.sender), address(this), _amount);
-        uint256 tokenId = lotteryNtf.newLotteryItem(msg.sender, _numbers, _amount, issueIndex);
+        uint256 tokenId = lotteryNFT.newLotteryItem(msg.sender, _numbers, _amount, issueIndex);
         lotteryInfo[issueIndex].push(tokenId);
         if (userInfo[msg.sender].length == 0) {
             totalAddresses = totalAddresses + 1;
@@ -155,7 +155,7 @@ contract Lottery is Ownable {
         uint256 totalAmout = 0;
         for (uint i = 0; i < lotteryInfo[_issueIndex].length; i++) {
             uint256 tokenId = lotteryInfo[_issueIndex][i];
-            uint256[] memory lotteryNumbers = lotteryNtf.getLotteryNumbers(tokenId);
+            uint256[] memory lotteryNumbers = lotteryNFT.getLotteryNumbers(tokenId);
             uint256[] storage _winningNumbers = historyNumbers[_issueIndex];
             uint256 matchingNumber = 0;
             for (uint j = 0; j < _winningNumbers.length; j++) {
@@ -164,7 +164,7 @@ contract Lottery is Ownable {
                 }
             }
             if (matchingNumber == _matchingNumber)  {
-                totalAmout = totalAmout + lotteryNtf.getLotteryAmount(tokenId);
+                totalAmout = totalAmout + lotteryNFT.getLotteryAmount(tokenId);
             }
         }
         return totalAmout;
@@ -174,7 +174,7 @@ contract Lottery is Ownable {
         uint256 index = 0;
         for (uint i = 0; i < lotteryInfo[_issueIndex].length; i++) {
             uint256 tokenId = lotteryInfo[_issueIndex][i];
-            uint256[] memory lotteryNumbers = lotteryNtf.getLotteryNumbers(tokenId);
+            uint256[] memory lotteryNumbers = lotteryNFT.getLotteryNumbers(tokenId);
             uint256[] storage _winningNumbers = historyNumbers[_issueIndex];
             uint256 matchingNumber = 0;
             for (uint j = 0; j < _winningNumbers.length; j++) {
@@ -196,14 +196,14 @@ contract Lottery is Ownable {
         uint256 total = 0;
         for (uint i = 0; i < lotteryInfo[_issueIndex].length; i++) {
             uint256 tokenId = lotteryInfo[_issueIndex][i];
-            total = total.add(lotteryNtf.getLotteryAmount(tokenId));
+            total = total.add(lotteryNFT.getLotteryAmount(tokenId));
         }
         return total;
     }
 
     function getRewardView(uint256 _tokenId) public view returns(uint256) {
-        uint256 _issueIndex = lotteryNtf.getLotteryIssueIndex(_tokenId);
-        uint256[] memory lotteryNumbers = lotteryNtf.getLotteryNumbers(_tokenId);
+        uint256 _issueIndex = lotteryNFT.getLotteryIssueIndex(_tokenId);
+        uint256[] memory lotteryNumbers = lotteryNFT.getLotteryNumbers(_tokenId);
         uint256[] storage _winningNumbers = historyNumbers[_issueIndex];
         uint256 matchingNumber = 0;
         for (uint i = 0; i < lotteryNumbers.length; i++) {
@@ -213,7 +213,7 @@ contract Lottery is Ownable {
         }
         uint256 reward = 0;
         if (matchingNumber > 1) {
-            uint256 amount = lotteryNtf.getLotteryAmount(_tokenId);
+            uint256 amount = lotteryNFT.getLotteryAmount(_tokenId);
             uint256 poolAmount = getTotalRewards(_issueIndex).mul(allocation[4-matchingNumber]).div(100);
             reward = amount.mul(1e12).div(getMatchingRewardAmount(_issueIndex, matchingNumber)).mul(poolAmount);
         }
@@ -222,13 +222,13 @@ contract Lottery is Ownable {
 
 
     function claimReward(uint256 _tokenId) public {
-        require(msg.sender == lotteryNtf.ownerOf(_tokenId), "not from owner");
-        require (lotteryNtf.getClaimStatus(_tokenId) == false, "claimed");
+        require(msg.sender == lotteryNFT.ownerOf(_tokenId), "not from owner");
+        require (lotteryNFT.getClaimStatus(_tokenId) == false, "claimed");
         uint256 reward = getRewardView(_tokenId);
         if(reward>0) {
             cake.safeTransfer(address(msg.sender), reward);
         }
-        lotteryNtf.claimReward(_tokenId);
+        lotteryNFT.claimReward(_tokenId);
         emit Claim(msg.sender, _tokenId, reward);
     }
 
