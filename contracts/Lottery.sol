@@ -63,23 +63,20 @@ contract Lottery is Ownable {
         lastTimestamp = block.timestamp;
     }
 
-    uint256[] public nullTicket = [0,0,0,0];
+    uint256[] private nullTicket = [0,0,0,0];
 
     function reset() external {
         require(msg.sender == adminAddress, "admin: wut?");
         require(winningNumbers.length == 4, "drawed?");
-
         lastTimestamp = block.timestamp;
         totalAddresses = 0;
         totalAmount = 0;
         delete winningNumbers;
         issueIndex++;
-
         if(getMatchingRewardAmount(issueIndex-1, 4) == 0) {
             uint256 amount = getTotalRewards(issueIndex-1).mul(allocation[0]).div(100);
             buy(amount, nullTicket);
         }
-
         emit Reset(issueIndex);
     }
 
@@ -88,7 +85,6 @@ contract Lottery is Ownable {
         for (uint i = 0; i < 4; i++) {
             require (_numbers[i] <= maxNumber, 'exceed the maximum');
         }
-
         cake.safeTransferFrom(address(msg.sender), address(this), _amount);
         uint256 tokenId = lotteryNtf.newLotteryItem(msg.sender, _numbers, _amount, issueIndex);
         lotteryInfo[issueIndex].push(tokenId);
@@ -98,13 +94,11 @@ contract Lottery is Ownable {
         userInfo[msg.sender].push(tokenId);
         totalAmount = totalAmount + _amount;
         lastTimestamp = block.timestamp;
-
         emit Buy(msg.sender, tokenId);
     }
 
     function drawing() public {
         require(msg.sender == adminAddress, "admin: wut?");
-
         bytes32 _structHash;
         uint256 _randomNumber;
         uint256 _maxNumber = maxNumber;
@@ -153,12 +147,8 @@ contract Lottery is Ownable {
         _randomNumber  = uint256(_structHash);
         assembly {_randomNumber := add(mod(_randomNumber, _maxNumber),1)}
         winningNumbers.push(_randomNumber);
-
-
         historyNumbers[issueIndex] = winningNumbers;
-
         emit Drawing(issueIndex, winningNumbers);
-
     }
 
     function getMatchingRewardAmount(uint256 _issueIndex, uint256 _matchingNumber) internal view returns (uint256) {
@@ -214,25 +204,21 @@ contract Lottery is Ownable {
     }
 
     function getRewardView(uint256 _tokenId) public view returns(uint256) {
-
         uint256 _issueIndex = lotteryNtf.getLotteryIssueIndex(_tokenId);
         uint256[] memory lotteryNumbers = lotteryNtf.getLotteryNumbers(_tokenId);
         uint256[] storage _winningNumbers = historyNumbers[_issueIndex];
-
         uint256 matchingNumber = 0;
         for (uint i = 0; i < lotteryNumbers.length; i++) {
             if (_winningNumbers[i] == lotteryNumbers[i]) {
                 matchingNumber= matchingNumber +1;
             }
         }
-
         uint256 reward = 0;
         if (matchingNumber > 1) {
             uint256 amount = lotteryNtf.getLotteryAmount(_tokenId);
             uint256 poolAmount = getTotalRewards(_issueIndex).mul(allocation[4-matchingNumber]).div(100);
             reward = amount.mul(1e12).div(getMatchingRewardAmount(_issueIndex, matchingNumber)).mul(poolAmount);
         }
-
         return reward.div(1e12);
     }
 
@@ -240,26 +226,22 @@ contract Lottery is Ownable {
     function claimReward(uint256 _tokenId) public {
         require(msg.sender == lotteryNtf.ownerOf(_tokenId), "not from owner");
         require (lotteryNtf.getClaimStatus(_tokenId) == false, "claimed");
-
         uint256 reward = getRewardView(_tokenId);
-
         if(reward>0) {
             cake.safeTransfer(address(msg.sender), reward);
         }
         lotteryNtf.claimReward(_tokenId);
-
         emit Claim(msg.sender, _tokenId, reward);
-
     }
 
 
     // Update admin address by the previous dev.
-    function dev(address _adminAddress) public onlyOwner {
+    function setAdmin(address _adminAddress) public onlyOwner {
         adminAddress = _adminAddress;
     }
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
-    function devWithdraw(uint256 _amount) public onlyOwner {
+    function adminWithdraw(uint256 _amount) public onlyOwner {
         cake.safeTransfer(address(msg.sender), _amount);
         emit DevWithdraw(msg.sender, _amount);
     }
