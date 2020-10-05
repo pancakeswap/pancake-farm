@@ -155,7 +155,6 @@ contract Lottery is Ownable {
         uint256 totalAmout = 0;
         for (uint i = 0; i < lotteryInfo[_issueIndex].length; i++) {
             uint256 tokenId = lotteryInfo[_issueIndex][i];
-
             uint256[] memory lotteryNumbers = lotteryNtf.getLotteryNumbers(tokenId);
             uint256[] storage _winningNumbers = historyNumbers[_issueIndex];
             uint256 matchingNumber = 0;
@@ -175,7 +174,6 @@ contract Lottery is Ownable {
         uint256 index = 0;
         for (uint i = 0; i < lotteryInfo[_issueIndex].length; i++) {
             uint256 tokenId = lotteryInfo[_issueIndex][i];
-
             uint256[] memory lotteryNumbers = lotteryNtf.getLotteryNumbers(tokenId);
             uint256[] storage _winningNumbers = historyNumbers[_issueIndex];
             uint256 matchingNumber = 0;
