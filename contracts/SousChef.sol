@@ -109,6 +109,15 @@ contract SousChef {
         poolInfo.accRewardPerShare = poolInfo.accRewardPerShare.add(tokenReward.mul(1e12).div(syrupSupply));
         poolInfo.lastRewardBlock = block.number;
     }
+    
+    function includes(address[] _addressList, address _depositor) internal view returns (bool) {
+        for (uint i = 0; i < _addressList.length; i++) {
+            if (_addressList[i] ==  _depositor) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     // Deposit Syrup tokens to SousChef for Reward allocation.
     function deposit(uint256 _amount) public {
@@ -117,7 +126,7 @@ contract SousChef {
 
         updatePool();
         syrup.safeTransferFrom(address(msg.sender), address(this), _amount);
-        if (userInfo[msg.sender].amount == 0) {
+        if (!includes(addressList, address(msg.sender))) {
             addressList.push(address(msg.sender));
         }
 
