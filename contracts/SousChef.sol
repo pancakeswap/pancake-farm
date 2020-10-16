@@ -13,9 +13,21 @@ contract SousChef {
 
     // Info of each user.
     struct UserInfo {
-        uint256 amount;
-        uint256 rewardDebt;
+        uint256 amount;   // How many SYRUP tokens the user has provided.
+        uint256 rewardDebt;  // Reward debt. See explanation below.
         uint256 rewardPending;
+        //
+        // We do some fancy math here. Basically, any point in time, the amount of SYRUPs
+        // entitled to a user but is pending to be distributed is:
+        //
+        //   pending reward = (user.amount * pool.accRewardPerShare) - user.rewardDebt + user.rewardPending
+        //
+        // Whenever a user deposits or withdraws LP tokens to a pool. Here's what happens:
+        //   1. The pool's `accRewardPerShare` (and `lastRewardBlock`) gets updated.
+        //   2. User receives the pending reward sent to his/her address.
+        //   3. User's `amount` gets updated.
+        //   3. User's `amount` gets updated.
+        //   4. User's `rewardDebt` gets updated.
     }
 
     // Info of Pool
@@ -109,27 +121,18 @@ contract SousChef {
         poolInfo.accRewardPerShare = poolInfo.accRewardPerShare.add(tokenReward.mul(1e12).div(syrupSupply));
         poolInfo.lastRewardBlock = block.number;
     }
-    
-    function includes(address[] _addressList, address _depositor) internal view returns (bool) {
-        for (uint i = 0; i < _addressList.length; i++) {
-            if (_addressList[i] ==  _depositor) {
-                return true;
-            }
-        }
-        return false;
-    }
+
 
     // Deposit Syrup tokens to SousChef for Reward allocation.
     function deposit(uint256 _amount) public {
         require (_amount > 0, 'amount 0');
         UserInfo storage user = userInfo[msg.sender];
-
         updatePool();
         syrup.safeTransferFrom(address(msg.sender), address(this), _amount);
-        if (!includes(addressList, address(msg.sender))) {
+        // The deposit behavior before farming will result in duplicate addresses, and thus we will manually remove them when airdropping.
+        if (user.amount == 0 && user.rewardPending == 0 && user.rewardDebt == 0)) {
             addressList.push(address(msg.sender));
         }
-
         user.rewardPending = user.amount.mul(poolInfo.accRewardPerShare).div(1e12).sub(user.rewardDebt).add(user.rewardPending);
         user.amount = user.amount.add(_amount);
         user.rewardDebt = user.amount.mul(poolInfo.accRewardPerShare).div(1e12);
@@ -160,7 +163,6 @@ contract SousChef {
         emit EmergencyWithdraw(msg.sender, user.amount);
         user.amount = 0;
         user.rewardDebt = 0;
-        user.rewardPending = 0;
     }
 
 }
