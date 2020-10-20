@@ -192,7 +192,7 @@ contract Lottery is Ownable {
         emit Drawing(issueIndex, winningNumbers);
     }
 
-    function calculateMatchingRewardAmount() external view returns (uint256[4] memory) {
+    function calculateMatchingRewardAmount() public view returns (uint256[4] memory) {
         uint256 totalAmout1 = 0;
         uint256 totalAmout2 = 0;
         uint256 totalAmout3 = 0;
@@ -207,13 +207,13 @@ contract Lottery is Ownable {
                 }
             }
             if (matchingNumber == 4)  {
-                totalAmout1 = totalAmout1 + lotteryNFT.getLotteryAmount(tokenId);;
+                totalAmout1 = totalAmout1 + lotteryNFT.getLotteryAmount(tokenId);
             }
             if (matchingNumber == 3)  {
-                totalAmout2 = totalAmout2 + lotteryNFT.getLotteryAmount(tokenId);;
+                totalAmout2 = totalAmout2 + lotteryNFT.getLotteryAmount(tokenId);
             }
             if (matchingNumber == 2)  {
-                totalAmout3 = totalAmout3 + lotteryNFT.getLotteryAmount(tokenId);;
+                totalAmout3 = totalAmout3 + lotteryNFT.getLotteryAmount(tokenId);
             }
         }
         return [totalAmount, totalAmout1, totalAmout2, totalAmout3];
