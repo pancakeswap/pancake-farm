@@ -25,8 +25,6 @@ contract Lottery is Ownable {
     address public adminAddress;
     // maxNumber
     uint256 public maxNumber = 5;
-    // claiming
-    bool public claiming = false;
 
     // =================================
 
@@ -82,7 +80,6 @@ contract Lottery is Ownable {
             uint256 amount = getTotalRewards(issueIndex-1).mul(allocation[0]).div(100);
             buy(amount, nullTicket);
         }
-        claiming = false;
         emit Reset(issueIndex);
     }
 
@@ -191,14 +188,8 @@ contract Lottery is Ownable {
         assembly {_randomNumber := add(mod(_randomNumber, _maxNumber),1)}
         winningNumbers.push(_randomNumber);
         historyNumbers[issueIndex] = winningNumbers;
+        historyAmount[issueIndex] = calculateMatchingRewardAmount();
         emit Drawing(issueIndex, winningNumbers);
-    }
-
-    function setClaiming(uint256[4] memory _historyAmount) public {
-        require(msg.sender == adminAddress, "admin: wut?");
-        require(drawed(), "reset?");
-        historyAmount[issueIndex] = _historyAmount;
-        claiming = true;
     }
 
     function calculateMatchingRewardAmount() external view returns (uint256[4] memory) {
