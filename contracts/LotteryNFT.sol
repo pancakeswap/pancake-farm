@@ -47,6 +47,14 @@ contract LotteryNFT is ERC721, Ownable {
     function claimReward(uint256 tokenId) external onlyOwner {
         claimInfo[tokenId] = true;
     }
+    function multiClaimReward(uint256[] memory _tokenIds) external onlyOwner {
+        for (uint i = 0; i < _tokenIds.length; i++) {
+            claimInfo[_tokenIds[i]] = true;
+        }
+    }
+    function burn(uint256 tokenId) external onlyOwner {
+        _burn(tokenId);
+    }
     function getClaimStatus(uint256 tokenId) external view returns (bool) {
         return claimInfo[tokenId];
     }
