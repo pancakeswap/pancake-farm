@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 import "./LotteryNFT.sol";
 
-// import "@nomiclabs/buidler/console.sol";
+import "@nomiclabs/buidler/console.sol";
 
 // 4 numbers
 contract Lottery is Ownable {
@@ -25,6 +25,8 @@ contract Lottery is Ownable {
     address public adminAddress;
     // maxNumber
     uint256 public maxNumber = 5;
+    // claiming
+    bool public claiming = false;
 
     // =================================
 
@@ -32,6 +34,8 @@ contract Lottery is Ownable {
     mapping (uint256 => uint256[]) public historyNumbers;
     // issueId => [tokenId]
     mapping (uint256 => uint256[]) public lotteryInfo;
+    // issueId => [totalAmount, firstMatchAmount, secondMatchingAmount, thirdMatchingAmount]
+    mapping (uint256 => uint256[]) public historyAmount;
     // address => [tokenId]
     mapping (address => uint256[]) public userInfo;
 
@@ -49,6 +53,7 @@ contract Lottery is Ownable {
     event Claim(address indexed user, uint256 tokenid, uint256 amount);
     event DevWithdraw(address indexed user, uint256 amount);
     event Reset(uint256 indexed issueIndex);
+    event MultiClaim(address indexed user, uint256 amount);
 
     constructor(
         IERC20 _cake,
@@ -67,38 +72,76 @@ contract Lottery is Ownable {
 
     function reset() external {
         require(msg.sender == adminAddress, "admin: wut?");
-        require(winningNumbers.length == 4, "drawed?");
+        require(drawed(), "drawed?");
         lastTimestamp = block.timestamp;
         totalAddresses = 0;
         totalAmount = 0;
         delete winningNumbers;
-        issueIndex++;
+        issueIndex = issueIndex +1;
         if(getMatchingRewardAmount(issueIndex-1, 4) == 0) {
             uint256 amount = getTotalRewards(issueIndex-1).mul(allocation[0]).div(100);
             buy(amount, nullTicket);
         }
+        claiming = false;
         emit Reset(issueIndex);
+    }
+
+    function drawed() public view returns(bool res) {
+        return winningNumbers.length != 0;
     }
 
     function buy(uint256 _amount, uint256[] memory _numbers) public {
         require (_numbers.length == 4, 'wrong length');
+        require (!drawed(), 'drawed, can not buy now');
         for (uint i = 0; i < 4; i++) {
             require (_numbers[i] <= maxNumber, 'exceed the maximum');
         }
-        cake.safeTransferFrom(address(msg.sender), address(this), _amount);
-        uint256 tokenId = lotteryNFT.newLotteryItem(msg.sender, _numbers, _amount, issueIndex);
-        lotteryInfo[issueIndex].push(tokenId);
-        if (userInfo[msg.sender].length == 0) {
-            totalAddresses = totalAddresses + 1;
+        if(_numbers[0] == 0)  {
+            uint256 tokenId = lotteryNFT.newLotteryItem(address(this), _numbers, _amount, issueIndex);
+            lotteryInfo[issueIndex].push(tokenId);
+            totalAmount = totalAmount + _amount;
+            lastTimestamp = block.timestamp;
+            emit Buy(address(this), tokenId);
         }
-        userInfo[msg.sender].push(tokenId);
-        totalAmount = totalAmount + _amount;
-        lastTimestamp = block.timestamp;
-        emit Buy(msg.sender, tokenId);
+        else {
+            cake.safeTransferFrom(address(msg.sender), address(this), _amount);
+            uint256 tokenId = lotteryNFT.newLotteryItem(msg.sender, _numbers, _amount, issueIndex);
+            lotteryInfo[issueIndex].push(tokenId);
+            if (userInfo[msg.sender].length == 0) {
+                totalAddresses = totalAddresses + 1;
+            }
+            userInfo[msg.sender].push(tokenId);
+            totalAmount = totalAmount + _amount;
+            lastTimestamp = block.timestamp;
+            emit Buy(msg.sender, tokenId);
+        }
+    }
+
+    function  multiBuy(uint256 _price, uint256[][] memory _numbers) public {
+        require (!drawed(), 'drawed, can not buy now');
+        uint256 totalPrice  = 0;
+        for (uint i = 0; i < _numbers.length; i++) {
+            require (_numbers[i].length == 4, 'wrong length');
+            for (uint j = 0; j < 4; j++) {
+                require (_numbers[i][j] <= maxNumber, 'exceed the maximum');
+            }
+            uint256 tokenId = lotteryNFT.newLotteryItem(msg.sender, _numbers[i], _price, issueIndex);
+            lotteryInfo[issueIndex].push(tokenId);
+            if (userInfo[msg.sender].length == 0) {
+                totalAddresses = totalAddresses + 1;
+            }
+            userInfo[msg.sender].push(tokenId);
+            totalAmount = totalAmount + _price;
+            lastTimestamp = block.timestamp;
+            totalPrice = totalPrice + _price;
+            // buy(_price, _numbers[i]);
+        }
+        cake.safeTransferFrom(address(msg.sender), address(this), totalPrice);
     }
 
     function drawing() public {
         require(msg.sender == adminAddress, "admin: wut?");
+        require(!drawed(), "reset?");
         bytes32 _structHash;
         uint256 _randomNumber;
         uint256 _maxNumber = maxNumber;
@@ -151,8 +194,56 @@ contract Lottery is Ownable {
         emit Drawing(issueIndex, winningNumbers);
     }
 
+    function setClaiming(uint256[4] memory _historyAmount) public {
+        require(msg.sender == adminAddress, "admin: wut?");
+        require(drawed(), "reset?");
+        historyAmount[issueIndex] = _historyAmount;
+        claiming = true;
+    }
+
+    function calculateMatchingRewardAmount() external view returns (uint256[4] memory) {
+        uint256 totalAmout1 = 0;
+        uint256 totalAmout2 = 0;
+        uint256 totalAmout3 = 0;
+        for (uint i = 0; i < lotteryInfo[issueIndex].length; i++) {
+            uint256 tokenId = lotteryInfo[issueIndex][i];
+            uint256[] memory lotteryNumbers = lotteryNFT.getLotteryNumbers(tokenId);
+            uint256[] storage _winningNumbers = historyNumbers[issueIndex];
+            uint256 matchingNumber = 0;
+            for (uint j = 0; j < _winningNumbers.length; j++) {
+                if(lotteryNumbers[j] == _winningNumbers[j]) {
+                    matchingNumber++;
+                }
+            }
+            if (matchingNumber == 4)  {
+                totalAmout1 = totalAmout1 + lotteryNFT.getLotteryAmount(tokenId);;
+            }
+            if (matchingNumber == 3)  {
+                totalAmout2 = totalAmout2 + lotteryNFT.getLotteryAmount(tokenId);;
+            }
+            if (matchingNumber == 2)  {
+                totalAmout3 = totalAmout3 + lotteryNFT.getLotteryAmount(tokenId);;
+            }
+        }
+        return [totalAmount, totalAmout1, totalAmout2, totalAmout3];
+    }
+
     function getMatchingRewardAmount(uint256 _issueIndex, uint256 _matchingNumber) internal view returns (uint256) {
-        uint256 totalAmout = 0;
+        return historyAmount[_issueIndex][5 - _matchingNumber];
+    }
+
+
+    function getTotalRewards(uint256 _issueIndex) public view returns(uint256) {
+        require (_issueIndex <= issueIndex, '_issueIndex <= issueIndex');
+
+        if(!drawed() && _issueIndex == issueIndex) {
+            return totalAmount;
+        }
+        return historyAmount[_issueIndex][0];
+    }
+
+    function getMatchingRewardLength(uint256 _issueIndex, uint256 _matchingNumber) external view returns (uint256) {
+        uint256 length = 0;
         for (uint i = 0; i < lotteryInfo[_issueIndex].length; i++) {
             uint256 tokenId = lotteryInfo[_issueIndex][i];
             uint256[] memory lotteryNumbers = lotteryNFT.getLotteryNumbers(tokenId);
@@ -164,10 +255,10 @@ contract Lottery is Ownable {
                 }
             }
             if (matchingNumber == _matchingNumber)  {
-                totalAmout = totalAmout + lotteryNFT.getLotteryAmount(tokenId);
+                length = length + 1;
             }
         }
-        return totalAmout;
+        return length;
     }
 
     function getMatchingLotteries(uint256 _issueIndex, uint256 _matchingNumber, uint256 _index) external view returns(uint256) {
@@ -190,15 +281,6 @@ contract Lottery is Ownable {
             }
         }
         return index;
-    }
-
-    function getTotalRewards(uint256 _issueIndex) public view returns(uint256) {
-        uint256 total = 0;
-        for (uint i = 0; i < lotteryInfo[_issueIndex].length; i++) {
-            uint256 tokenId = lotteryInfo[_issueIndex][i];
-            total = total.add(lotteryNFT.getLotteryAmount(tokenId));
-        }
-        return total;
     }
 
     function getRewardView(uint256 _tokenId) public view returns(uint256) {
@@ -232,6 +314,23 @@ contract Lottery is Ownable {
         emit Claim(msg.sender, _tokenId, reward);
     }
 
+    function  multiClaim(uint256[] memory _tickets) public {
+        require (drawed(), 'havnt drawed, can not claim');
+        uint256 totalReward = 0;
+        for (uint i = 0; i < _tickets.length; i++) {
+            require (msg.sender == lotteryNFT.ownerOf(_tickets[i]), "not from owner");
+            require (lotteryNFT.getClaimStatus(_tickets[i]) == false, "claimed");
+            uint256 reward = getRewardView(_tickets[i]);
+            if(reward>0) {
+                totalReward = reward.add(totalReward);
+            }
+        }
+        lotteryNFT.multiClaimReward(_tickets);
+        if(totalReward>0) {
+            cake.safeTransfer(address(msg.sender), totalReward);
+        }
+        emit MultiClaim(msg.sender, totalReward);
+    }
 
     // Update admin address by the previous dev.
     function setAdmin(address _adminAddress) public onlyOwner {
