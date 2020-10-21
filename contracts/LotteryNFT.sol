@@ -1,5 +1,3 @@
-// contracts/LotteryNF.sol
-// SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
@@ -11,14 +9,14 @@ contract LotteryNFT is ERC721, Ownable {
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
 
-    mapping (uint256 => uint256[]) public lotteryInfo;
+    mapping (uint256 => uint8[4]) public lotteryInfo;
     mapping (uint256 => uint256) public lotteryAmount;
     mapping (uint256 => uint256) public issueIndex;
     mapping (uint256 => bool) public claimInfo;
 
     constructor() public ERC721("Pancake Lottery NFT", "ticket") {}
 
-    function newLotteryItem(address player, uint256[] memory _lotteryNumbers, uint256 _amount, uint256 _issueIndex)
+    function newLotteryItem(address player, uint8[4] memory _lotteryNumbers, uint256 _amount, uint256 _issueIndex)
         public onlyOwner
         returns (uint256)
     {
@@ -35,7 +33,7 @@ contract LotteryNFT is ERC721, Ownable {
         return newItemId;
     }
 
-    function getLotteryNumbers(uint256 tokenId) external view returns (uint256[] memory) {
+    function getLotteryNumbers(uint256 tokenId) external view returns (uint8[4] memory) {
         return lotteryInfo[tokenId];
     }
     function getLotteryAmount(uint256 tokenId) external view returns (uint256) {
