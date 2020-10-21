@@ -29,11 +29,13 @@ contract Lottery is Ownable {
     // =================================
 
     // issueId => winningNumbers[numbers]
-    mapping (uint256 => uint256[]) public historyNumbers;
+    mapping (uint256 => uint8[]) public historyNumbers;
     // issueId => [tokenId]
     mapping (uint256 => uint256[]) public lotteryInfo;
     // issueId => [totalAmount, firstMatchAmount, secondMatchingAmount, thirdMatchingAmount]
     mapping (uint256 => uint256[]) public historyAmount;
+    // issueId => buyAmountSum
+    mapping (uint256 => mapping(uint32 => uint256)) public userBuyAmountSum;
     // address => [tokenId]
     mapping (address => uint256[]) public userInfo;
 
@@ -102,6 +104,11 @@ contract Lottery is Ownable {
         }
         else {
             cake.safeTransferFrom(address(msg.sender), address(this), _amount);
+            uint32[] memory userNumberIndex = generateUserByAmountSumIndexKey(_numbers);
+            for (uint i = 0; i < userNumberIndex.length; i++) {
+                userByAmountSumIndexKey[issueIndex][userNumberIndex[i]]=userByAmountSumIndexKey[issueIndex][userNumberIndex[i]].add(_amount);
+            }
+
             uint256 tokenId = lotteryNFT.newLotteryItem(msg.sender, _numbers, _amount, issueIndex);
             lotteryInfo[issueIndex].push(tokenId);
             if (userInfo[msg.sender].length == 0) {
@@ -132,8 +139,31 @@ contract Lottery is Ownable {
             lastTimestamp = block.timestamp;
             totalPrice = totalPrice + _price;
             // buy(_price, _numbers[i]);
+            uint32[] memory userByAmountSumIndexKey = generateUserByAmountSumIndexKey(_numbers);
+            for (uint i = 0; i < userByAmountSumIndexKey.length; i++) {
+                userByAmountSumIndexKey[issueIndex][userNumberIndex[i]]=userByAmountSumIndexKey[issueIndex][userNumberIndex[i]].add(_price);
+            }
         }
         cake.safeTransferFrom(address(msg.sender), address(this), totalPrice);
+    }
+
+    function generateUserByAmountSumIndexKey(uint256[] memory tempNumber) internal view returns (uint32[] memory) {
+        uint32[] memory result = new uint32[11];
+        result[0] = tempNumber[0]<<24 + tempNumber[1]<<16 + tempNumber[2]<<8 + tempNumber[3];
+
+        result[1] = tempNumber[0]<<16 + tempNumber[1]<<8 + tempNumber[2];
+        result[2] = tempNumber[0]<<16 + tempNumber[1]<<8 + tempNumber[3];
+        result[3] = tempNumber[0]<<16 + tempNumber[2]<<8 + tempNumber[3];
+        result[4] = tempNumber[1]<<16 + tempNumber[2]<<8 + tempNumber[3];
+
+        result[5] = tempNumber[0]<<8 + tempNumber[1];
+        result[6] = tempNumber[0]<<8 + tempNumber[2];
+        result[7] = tempNumber[0]<<8 + tempNumber[3];
+        result[8] = tempNumber[1]<<8 + tempNumber[2];
+        result[9] = tempNumber[1]<<8 + tempNumber[3];
+        result[10] = tempNumber[2]<<8 + tempNumber[3];
+
+        return result;
     }
 
     function drawing() public {
@@ -193,29 +223,24 @@ contract Lottery is Ownable {
     }
 
     function calculateMatchingRewardAmount() public view returns (uint256[4] memory) {
-        uint256 totalAmout1 = 0;
-        uint256 totalAmout2 = 0;
-        uint256 totalAmout3 = 0;
-        for (uint i = 0; i < lotteryInfo[issueIndex].length; i++) {
-            uint256 tokenId = lotteryInfo[issueIndex][i];
-            uint256[] memory lotteryNumbers = lotteryNFT.getLotteryNumbers(tokenId);
-            uint256[] storage _winningNumbers = historyNumbers[issueIndex];
-            uint256 matchingNumber = 0;
-            for (uint j = 0; j < _winningNumbers.length; j++) {
-                if(lotteryNumbers[j] == _winningNumbers[j]) {
-                    matchingNumber++;
-                }
-            }
-            if (matchingNumber == 4)  {
-                totalAmout1 = totalAmout1 + lotteryNFT.getLotteryAmount(tokenId);
-            }
-            if (matchingNumber == 3)  {
-                totalAmout2 = totalAmout2 + lotteryNFT.getLotteryAmount(tokenId);
-            }
-            if (matchingNumber == 2)  {
-                totalAmout3 = totalAmout3 + lotteryNFT.getLotteryAmount(tokenId);
-            }
-        }
+        uint32[] memory userByAmountSumIndexKey = generateUserByAmountSumIndexKey(winningNumbers);
+
+        uint256 totalAmout1 = userBuyAmountSum[issueIndex][userByAmountSumIndexKey[0]];
+
+        uint256 totalAmout2 = userBuyAmountSum[issueIndex][userByAmountSumIndexKey[1]];
+        totalAmout2 = totalAmout2.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[2]]);
+        totalAmout2 = totalAmout2.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[3]]);
+        totalAmout2 = totalAmout2.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[4]]);
+        totalAmout2 = totalAmout2.sub(totalAmout1.mul(3));
+
+        uint256 totalAmout3 = userBuyAmountSum[issueIndex][userByAmountSumIndexKey[5]];
+        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[6]]);
+        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[7]]);
+        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[8]]);
+        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[9]]);
+        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[10]]);
+        totalAmout3 = totalAmout3.sub(totalAmout2.mul(3)).add(totalAmout1.mul(6));
+
         return [totalAmount, totalAmout1, totalAmout2, totalAmout3];
     }
 
