@@ -1,10 +1,10 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/access/Ownable.sol";
 
 import "./LotteryNFT.sol";
 
@@ -15,6 +15,7 @@ contract Lottery is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
+    uint8 constant keyLengthForEachBuy = 11;
     // Allocation for first/sencond/third reward
     uint256[] private allocation = [60, 20, 10];
     // The TOKEN to buy lottery
@@ -29,7 +30,7 @@ contract Lottery is Ownable {
     // =================================
 
     // issueId => winningNumbers[numbers]
-    mapping (uint256 => uint8[]) public historyNumbers;
+    mapping (uint256 => uint8[4]) public historyNumbers;
     // issueId => [tokenId]
     mapping (uint256 => uint256[]) public lotteryInfo;
     // issueId => [totalAmount, firstMatchAmount, secondMatchingAmount, thirdMatchingAmount]
@@ -44,12 +45,12 @@ contract Lottery is Ownable {
     uint256 public totalAmount = 0;
     uint256 public lastTimestamp;
 
-    uint256[] public winningNumbers;
+    uint8[4] public winningNumbers;
 
     // =================================
 
     event Buy(address indexed user, uint256 tokenId);
-    event Drawing(uint256 indexed issueIndex, uint256[] winningNumbers);
+    event Drawing(uint256 indexed issueIndex, uint8[4] winningNumbers);
     event Claim(address indexed user, uint256 tokenid, uint256 amount);
     event DevWithdraw(address indexed user, uint256 amount);
     event Reset(uint256 indexed issueIndex);
@@ -68,7 +69,7 @@ contract Lottery is Ownable {
         lastTimestamp = block.timestamp;
     }
 
-    uint256[] private nullTicket = [0,0,0,0];
+    uint8[4] public nullTicket = [0,0,0,0];
 
     function reset() external {
         require(msg.sender == adminAddress, "admin: wut?");
@@ -76,7 +77,10 @@ contract Lottery is Ownable {
         lastTimestamp = block.timestamp;
         totalAddresses = 0;
         totalAmount = 0;
-        delete winningNumbers;
+        winningNumbers[0]=0;
+        winningNumbers[1]=0;
+        winningNumbers[2]=0;
+        winningNumbers[3]=0;
         issueIndex = issueIndex +1;
         if(getMatchingRewardAmount(issueIndex-1, 4) == 0) {
             uint256 amount = getTotalRewards(issueIndex-1).mul(allocation[0]).div(100);
@@ -86,10 +90,10 @@ contract Lottery is Ownable {
     }
 
     function drawed() public view returns(bool res) {
-        return winningNumbers.length != 0;
+        return winningNumbers[0] != 0;
     }
 
-    function buy(uint256 _amount, uint256[] memory _numbers) public {
+    function buy(uint256 _amount, uint8[4] memory _numbers) public {
         require (_numbers.length == 4, 'wrong length');
         require (!drawed(), 'drawed, can not buy now');
         for (uint i = 0; i < 4; i++) {
@@ -104,9 +108,9 @@ contract Lottery is Ownable {
         }
         else {
             cake.safeTransferFrom(address(msg.sender), address(this), _amount);
-            uint32[] memory userNumberIndex = generateUserByAmountSumIndexKey(_numbers);
-            for (uint i = 0; i < userNumberIndex.length; i++) {
-                userByAmountSumIndexKey[issueIndex][userNumberIndex[i]]=userByAmountSumIndexKey[issueIndex][userNumberIndex[i]].add(_amount);
+            uint32[keyLengthForEachBuy] memory userNumberIndex = generateNumberIndexKey(_numbers);
+            for (uint i = 0; i < keyLengthForEachBuy; i++) {
+                userBuyAmountSum[issueIndex][userNumberIndex[i]]=userBuyAmountSum[issueIndex][userNumberIndex[i]].add(_amount);
             }
 
             uint256 tokenId = lotteryNFT.newLotteryItem(msg.sender, _numbers, _amount, issueIndex);
@@ -121,7 +125,7 @@ contract Lottery is Ownable {
         }
     }
 
-    function  multiBuy(uint256 _price, uint256[][] memory _numbers) public {
+    function  multiBuy(uint256 _price, uint8[4][] memory _numbers) public {
         require (!drawed(), 'drawed, can not buy now');
         uint256 totalPrice  = 0;
         for (uint i = 0; i < _numbers.length; i++) {
@@ -139,16 +143,22 @@ contract Lottery is Ownable {
             lastTimestamp = block.timestamp;
             totalPrice = totalPrice + _price;
             // buy(_price, _numbers[i]);
-            uint32[] memory userByAmountSumIndexKey = generateUserByAmountSumIndexKey(_numbers);
-            for (uint i = 0; i < userByAmountSumIndexKey.length; i++) {
-                userByAmountSumIndexKey[issueIndex][userNumberIndex[i]]=userByAmountSumIndexKey[issueIndex][userNumberIndex[i]].add(_price);
+            uint32[keyLengthForEachBuy] memory numberIndexKey = generateNumberIndexKey(_numbers[i]);
+            for (uint k = 0; k < keyLengthForEachBuy; k++) {
+                userBuyAmountSum[issueIndex][numberIndexKey[k]]=userBuyAmountSum[issueIndex][numberIndexKey[k]].add(_price);
             }
         }
         cake.safeTransferFrom(address(msg.sender), address(this), totalPrice);
     }
 
-    function generateUserByAmountSumIndexKey(uint256[] memory tempNumber) internal view returns (uint32[] memory) {
-        uint32[] memory result = new uint32[11];
+    function generateNumberIndexKey(uint8[4] memory number) internal pure returns (uint32[keyLengthForEachBuy] memory) {
+        uint32[4] memory tempNumber;
+        tempNumber[0]=uint32(number[0]);
+        tempNumber[1]=uint32(number[1]);
+        tempNumber[2]=uint32(number[2]);
+        tempNumber[3]=uint32(number[3]);
+
+        uint32[keyLengthForEachBuy] memory result;
         result[0] = tempNumber[0]<<24 + tempNumber[1]<<16 + tempNumber[2]<<8 + tempNumber[3];
 
         result[1] = tempNumber[0]<<16 + tempNumber[1]<<8 + tempNumber[2];
@@ -183,7 +193,7 @@ contract Lottery is Ownable {
         );
         _randomNumber  = uint256(_structHash);
         assembly {_randomNumber := add(mod(_randomNumber, _maxNumber),1)}
-        winningNumbers.push(_randomNumber);
+        winningNumbers[0]=uint8(_randomNumber);
 
         // 2
         _structHash = keccak256(
@@ -194,7 +204,7 @@ contract Lottery is Ownable {
         );
         _randomNumber  = uint256(_structHash);
         assembly {_randomNumber := add(mod(_randomNumber, _maxNumber),1)}
-        winningNumbers.push(_randomNumber);
+        winningNumbers[1]=uint8(_randomNumber);
 
         // 3
         _structHash = keccak256(
@@ -205,7 +215,7 @@ contract Lottery is Ownable {
         );
         _randomNumber  = uint256(_structHash);
         assembly {_randomNumber := add(mod(_randomNumber, _maxNumber),1)}
-        winningNumbers.push(_randomNumber);
+        winningNumbers[2]=uint8(_randomNumber);
 
         // 4
         _structHash = keccak256(
@@ -216,30 +226,31 @@ contract Lottery is Ownable {
         );
         _randomNumber  = uint256(_structHash);
         assembly {_randomNumber := add(mod(_randomNumber, _maxNumber),1)}
-        winningNumbers.push(_randomNumber);
+        winningNumbers[3]=uint8(_randomNumber);
+
         historyNumbers[issueIndex] = winningNumbers;
         historyAmount[issueIndex] = calculateMatchingRewardAmount();
         emit Drawing(issueIndex, winningNumbers);
     }
 
     function calculateMatchingRewardAmount() public view returns (uint256[4] memory) {
-        uint32[] memory userByAmountSumIndexKey = generateUserByAmountSumIndexKey(winningNumbers);
+        uint32[keyLengthForEachBuy] memory numberIndexKey = generateNumberIndexKey(winningNumbers);
 
-        uint256 totalAmout1 = userBuyAmountSum[issueIndex][userByAmountSumIndexKey[0]];
+        uint256 totalAmout1 = userBuyAmountSum[issueIndex][numberIndexKey[0]];
 
-        uint256 totalAmout2 = userBuyAmountSum[issueIndex][userByAmountSumIndexKey[1]];
-        totalAmout2 = totalAmout2.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[2]]);
-        totalAmout2 = totalAmout2.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[3]]);
-        totalAmout2 = totalAmout2.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[4]]);
+        uint256 totalAmout2 = userBuyAmountSum[issueIndex][numberIndexKey[1]];
+        totalAmout2 = totalAmout2.add(userBuyAmountSum[issueIndex][numberIndexKey[2]]);
+        totalAmout2 = totalAmout2.add(userBuyAmountSum[issueIndex][numberIndexKey[3]]);
+        totalAmout2 = totalAmout2.add(userBuyAmountSum[issueIndex][numberIndexKey[4]]);
         totalAmout2 = totalAmout2.sub(totalAmout1.mul(3));
 
-        uint256 totalAmout3 = userBuyAmountSum[issueIndex][userByAmountSumIndexKey[5]];
-        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[6]]);
-        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[7]]);
-        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[8]]);
-        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[9]]);
-        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][userByAmountSumIndexKey[10]]);
-        totalAmout3 = totalAmout3.sub(totalAmout2.mul(3)).add(totalAmout1.mul(6));
+        uint256 totalAmout3 = userBuyAmountSum[issueIndex][numberIndexKey[5]];
+        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][numberIndexKey[6]]);
+        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][numberIndexKey[7]]);
+        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][numberIndexKey[8]]);
+        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][numberIndexKey[9]]);
+        totalAmout3 = totalAmout3.add(userBuyAmountSum[issueIndex][numberIndexKey[10]]);
+        totalAmout3 = totalAmout3.sub(totalAmout2.add(totalAmout1).mul(3));
 
         return [totalAmount, totalAmout1, totalAmout2, totalAmout3];
     }
@@ -262,8 +273,8 @@ contract Lottery is Ownable {
         uint256 length = 0;
         for (uint i = 0; i < lotteryInfo[_issueIndex].length; i++) {
             uint256 tokenId = lotteryInfo[_issueIndex][i];
-            uint256[] memory lotteryNumbers = lotteryNFT.getLotteryNumbers(tokenId);
-            uint256[] storage _winningNumbers = historyNumbers[_issueIndex];
+            uint8[4] memory lotteryNumbers = lotteryNFT.getLotteryNumbers(tokenId);
+            uint8[4] memory _winningNumbers = historyNumbers[_issueIndex];
             uint256 matchingNumber = 0;
             for (uint j = 0; j < _winningNumbers.length; j++) {
                 if(lotteryNumbers[j] == _winningNumbers[j]) {
@@ -281,8 +292,8 @@ contract Lottery is Ownable {
         uint256 index = 0;
         for (uint i = 0; i < lotteryInfo[_issueIndex].length; i++) {
             uint256 tokenId = lotteryInfo[_issueIndex][i];
-            uint256[] memory lotteryNumbers = lotteryNFT.getLotteryNumbers(tokenId);
-            uint256[] storage _winningNumbers = historyNumbers[_issueIndex];
+            uint8[4] memory lotteryNumbers = lotteryNFT.getLotteryNumbers(tokenId);
+            uint8[4] memory _winningNumbers = historyNumbers[_issueIndex];
             uint256 matchingNumber = 0;
             for (uint j = 0; j < _winningNumbers.length; j++) {
                 if (lotteryNumbers[j] == _winningNumbers[j]) {
@@ -301,8 +312,8 @@ contract Lottery is Ownable {
 
     function getRewardView(uint256 _tokenId) public view returns(uint256) {
         uint256 _issueIndex = lotteryNFT.getLotteryIssueIndex(_tokenId);
-        uint256[] memory lotteryNumbers = lotteryNFT.getLotteryNumbers(_tokenId);
-        uint256[] storage _winningNumbers = historyNumbers[_issueIndex];
+        uint8[4] memory lotteryNumbers = lotteryNFT.getLotteryNumbers(_tokenId);
+        uint8[4] memory _winningNumbers = historyNumbers[_issueIndex];
         uint256 matchingNumber = 0;
         for (uint i = 0; i < lotteryNumbers.length; i++) {
             if (_winningNumbers[i] == lotteryNumbers[i]) {
