@@ -22,9 +22,9 @@ contract LotteryRewardPool is Ownable {
         address _receiver
     ) public {
         chef = _chef;
+        cake = _cake;
         adminAddress = _admin;
         receiver = _receiver;
-        cake = _cake;
     }
 
     event StartFarming(address indexed user, uint256 indexed pid);
