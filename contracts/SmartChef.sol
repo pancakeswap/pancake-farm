@@ -49,6 +49,8 @@ contract SmartChef is Ownable {
     PoolInfo[] public poolInfo;
     // Info of each user that stakes LP tokens.
     mapping (address => UserInfo) public userInfo;
+    // limit 10 BNB here
+    uint256 public limitAmount = 10000000000000000000;
     // Total allocation poitns. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
     // The block number when CAKE mining starts.
@@ -90,6 +92,11 @@ contract SmartChef is Ownable {
     // Set the migrator contract. Can only be called by the owner.
     function setMigrator(IMigratorChef _migrator) public onlyOwner {
         migrator = _migrator;
+    }
+
+    // Set the limit amount. Can only be called by the owner.
+    function setLimitAmount(uint256 _amount) public onlyOwner {
+        limitAmount = _amount;
     }
 
     // Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
@@ -159,6 +166,9 @@ contract SmartChef is Ownable {
     function deposit(uint256 _amount) public {
         PoolInfo storage pool = poolInfo[0];
         UserInfo storage user = userInfo[msg.sender];
+
+        require (user.amount + _amount <= limitAmount, 'exceed the top');
+
         updatePool(0);
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(pool.accCakePerShare).div(1e12).sub(user.rewardDebt);
