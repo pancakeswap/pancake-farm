@@ -191,7 +191,7 @@ contract BnbStaking is Ownable {
         PoolInfo storage pool = poolInfo[0];
         UserInfo storage user = userInfo[msg.sender];
 
-        require (user.amount + _amount <= limitAmount, 'exceed the top');
+        require (user.amount.add(_amount) <= limitAmount, 'exceed the top');
 
         require (!user.inBlackList, 'in black list');
 
