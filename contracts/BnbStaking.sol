@@ -109,6 +109,10 @@ contract BnbStaking is Ownable {
         userInfo[_blackAddress].inBlackList = true;
     }
 
+    function removeBlackList(address _blackAddress) public onlyAdmin {
+        userInfo[_blackAddress].inBlackList = false;
+    }
+
     // Set the migrator contract. Can only be called by the owner.
     function setMigrator(IMigratorChef _migrator) public onlyOwner {
         migrator = _migrator;
