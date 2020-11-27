@@ -7,6 +7,12 @@ import '@pancakeswap/pancake-swap-lib/contracts/access/Ownable.sol';
 
 // import "@nomiclabs/buidler/console.sol";
 
+interface IWBNB {
+    function deposit() external payable;
+    function transfer(address to, uint value) external returns (bool);
+    function withdraw(uint) external;
+}
+
 contract BnbStaking is Ownable {
     using SafeMath for uint256;
     using SafeBEP20 for IBEP20;
@@ -26,12 +32,15 @@ contract BnbStaking is Ownable {
         uint256 accCakePerShare; // Accumulated CAKEs per share, times 1e12. See below.
     }
 
-    // The CAKE TOKEN!
-    IBEP20 public syrup;
+    // The REWARD TOKEN
     IBEP20 public rewardToken;
 
     // adminAddress
     address public adminAddress;
+
+
+    // WBNB
+    address public immutable WBNB;
 
     // CAKE tokens created per block.
     uint256 public rewardPerBlock;
@@ -54,23 +63,24 @@ contract BnbStaking is Ownable {
     event EmergencyWithdraw(address indexed user, uint256 amount);
 
     constructor(
-        IBEP20 _syrup,
+        IBEP20 _lp,
         IBEP20 _rewardToken,
         uint256 _rewardPerBlock,
         uint256 _startBlock,
         uint256 _bonusEndBlock,
-        address _adminAddress
+        address _adminAddress,
+        address _wbnb
     ) public {
-        syrup = _syrup;
         rewardToken = _rewardToken;
         rewardPerBlock = _rewardPerBlock;
         startBlock = _startBlock;
         bonusEndBlock = _bonusEndBlock;
         adminAddress = _adminAddress;
+        WBNB = _wbnb;
 
         // staking pool
         poolInfo.push(PoolInfo({
-            lpToken: _syrup,
+            lpToken: _lp,
             allocPoint: 1000,
             lastRewardBlock: startBlock,
             accCakePerShare: 0
@@ -155,12 +165,11 @@ contract BnbStaking is Ownable {
 
 
     // Stake tokens to SmartChef
-    function deposit(uint256 _amount) public {
+    function deposit() public payable {
         PoolInfo storage pool = poolInfo[0];
         UserInfo storage user = userInfo[msg.sender];
 
-        require (user.amount.add(_amount) <= limitAmount, 'exceed the top');
-
+        require (user.amount.add(msg.value) <= limitAmount, 'exceed the top');
         require (!user.inBlackList, 'in black list');
 
         updatePool(0);
@@ -170,32 +179,39 @@ contract BnbStaking is Ownable {
                 rewardToken.safeTransfer(address(msg.sender), pending);
             }
         }
-        if(_amount > 0) {
-            pool.lpToken.safeTransferFrom(address(msg.sender), address(this), _amount);
-            user.amount = user.amount.add(_amount);
+        if(msg.value > 0) {
+            IWBNB(WBNB).deposit{value: msg.value}();
+            assert(IWBNB(WBNB).transfer(address(this), msg.value));
+            user.amount = user.amount.add(msg.value);
         }
         user.rewardDebt = user.amount.mul(pool.accCakePerShare).div(1e12);
 
-        emit Deposit(msg.sender, _amount);
+        emit Deposit(msg.sender, msg.value);
+    }
+
+    function safeTransferBNB(address to, uint256 value) internal {
+        (bool success,) = to.call{value:value}(new bytes(0));
+        require(success, 'TransferHelper: ETH_TRANSFER_FAILED');
     }
 
     // Withdraw tokens from STAKING.
-    function withdraw(uint256 _amount) public {
+    function withdraw() public payable {
         PoolInfo storage pool = poolInfo[0];
         UserInfo storage user = userInfo[msg.sender];
-        require(user.amount >= _amount, "withdraw: not good");
+        require(user.amount >= msg.value, "withdraw: not good");
         updatePool(0);
         uint256 pending = user.amount.mul(pool.accCakePerShare).div(1e12).sub(user.rewardDebt);
         if(pending > 0 && !user.inBlackList) {
             rewardToken.safeTransfer(address(msg.sender), pending);
         }
-        if(_amount > 0) {
-            user.amount = user.amount.sub(_amount);
-            pool.lpToken.safeTransfer(address(msg.sender), _amount);
+        if(msg.value > 0) {
+            IWBNB(WBNB).withdraw(msg.value);
+            safeTransferBNB(address(msg.sender), msg.value);
+            user.amount = user.amount.sub(msg.value);
         }
         user.rewardDebt = user.amount.mul(pool.accCakePerShare).div(1e12);
 
-        emit Withdraw(msg.sender, _amount);
+        emit Withdraw(msg.sender, msg.value);
     }
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
