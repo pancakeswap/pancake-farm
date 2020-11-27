@@ -9,8 +9,8 @@ import '@pancakeswap/pancake-swap-lib/contracts/access/Ownable.sol';
 
 interface IWBNB {
     function deposit() external payable;
-    function transfer(address to, uint value) external returns (bool);
-    function withdraw(uint) external;
+    function transfer(address to, uint256 value) external returns (bool);
+    function withdraw(uint256) external;
 }
 
 contract BnbStaking is Ownable {
@@ -93,6 +93,10 @@ contract BnbStaking is Ownable {
     modifier onlyAdmin() {
         require(msg.sender == adminAddress, "admin: wut?");
         _;
+    }
+
+    receive() external payable {
+        assert(msg.sender == WBNB); // only accept BNB via fallback from the WBNB contract
     }
 
     // Update admin address by the previous dev.
@@ -190,28 +194,29 @@ contract BnbStaking is Ownable {
     }
 
     function safeTransferBNB(address to, uint256 value) internal {
-        (bool success,) = to.call{value:value}(new bytes(0));
+        (bool success, ) = to.call{gas: 23000, value: value}("");
+        // (bool success,) = to.call{value:value}(new bytes(0));
         require(success, 'TransferHelper: ETH_TRANSFER_FAILED');
     }
 
     // Withdraw tokens from STAKING.
-    function withdraw() public payable {
+    function withdraw(uint256 _amount) public {
         PoolInfo storage pool = poolInfo[0];
         UserInfo storage user = userInfo[msg.sender];
-        require(user.amount >= msg.value, "withdraw: not good");
+        require(user.amount >= _amount, "withdraw: not good");
         updatePool(0);
         uint256 pending = user.amount.mul(pool.accCakePerShare).div(1e12).sub(user.rewardDebt);
         if(pending > 0 && !user.inBlackList) {
             rewardToken.safeTransfer(address(msg.sender), pending);
         }
-        if(msg.value > 0) {
-            IWBNB(WBNB).withdraw(msg.value);
-            safeTransferBNB(address(msg.sender), msg.value);
-            user.amount = user.amount.sub(msg.value);
+        if(_amount > 0) {
+            user.amount = user.amount.sub(_amount);
+            IWBNB(WBNB).withdraw(_amount);
+            safeTransferBNB(address(msg.sender), _amount);
         }
         user.rewardDebt = user.amount.mul(pool.accCakePerShare).div(1e12);
 
-        emit Withdraw(msg.sender, msg.value);
+        emit Withdraw(msg.sender, _amount);
     }
 
     // Withdraw without caring about rewards. EMERGENCY ONLY.
