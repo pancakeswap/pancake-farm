@@ -7,19 +7,6 @@ import '@pancakeswap/pancake-swap-lib/contracts/access/Ownable.sol';
 
 // import "@nomiclabs/buidler/console.sol";
 
-interface IMigratorChef {
-    // Perform LP token migration from legacy PancakeSwap to StableX Swap.
-    // Take the current LP token address and return the new LP token address.
-    // Migrator should have full access to the caller's LP token.
-    // Return the new LP token address.
-    //
-    // XXX Migrator must have allowance access to PancakeSwap LP tokens.
-    // CakeSwap must mint EXACTLY the same amount of CakeSwap LP tokens or
-    // else something bad will happen. Traditional PancakeSwap does not
-    // do that so be careful!
-    function migrate(IBEP20 token) external returns (IBEP20);
-}
-
 contract BnbStaking is Ownable {
     using SafeMath for uint256;
     using SafeBEP20 for IBEP20;
@@ -61,8 +48,6 @@ contract BnbStaking is Ownable {
     uint256 public startBlock;
     // The block number when CAKE mining ends.
     uint256 public bonusEndBlock;
-    // The migrator contract. It has a lot of power. Can only be set through governance (owner).
-    IMigratorChef public migrator;
 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
@@ -113,26 +98,9 @@ contract BnbStaking is Ownable {
         userInfo[_blackAddress].inBlackList = false;
     }
 
-    // Set the migrator contract. Can only be called by the owner.
-    function setMigrator(IMigratorChef _migrator) public onlyOwner {
-        migrator = _migrator;
-    }
-
     // Set the limit amount. Can only be called by the owner.
     function setLimitAmount(uint256 _amount) public onlyOwner {
         limitAmount = _amount;
-    }
-
-    // Migrate lp token to another lp contract. Can be called by anyone. We trust that migrator contract is good.
-    function migrate(uint256 _pid) public {
-        require(address(migrator) != address(0), "migrate: no migrator");
-        PoolInfo storage pool = poolInfo[_pid];
-        IBEP20 lpToken = pool.lpToken;
-        uint256 bal = lpToken.balanceOf(address(this));
-        lpToken.safeApprove(address(migrator), bal);
-        IBEP20 newLpToken = migrator.migrate(lpToken);
-        require(bal == newLpToken.balanceOf(address(this)), "migrate: bad");
-        pool.lpToken = newLpToken;
     }
 
     // Return reward multiplier over the given _from to _to block.
