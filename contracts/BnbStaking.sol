@@ -20,7 +20,7 @@ interface IMigratorChef {
     function migrate(IBEP20 token) external returns (IBEP20);
 }
 
-contract SmartChef is Ownable {
+contract BnbStaking is Ownable {
     using SafeMath for uint256;
     using SafeBEP20 for IBEP20;
 
@@ -28,6 +28,7 @@ contract SmartChef is Ownable {
     struct UserInfo {
         uint256 amount;     // How many LP tokens the user has provided.
         uint256 rewardDebt; // Reward debt. See explanation below.
+        bool inBlackList;
     }
 
     // Info of each pool.
@@ -41,6 +42,9 @@ contract SmartChef is Ownable {
     // The CAKE TOKEN!
     IBEP20 public syrup;
     IBEP20 public rewardToken;
+
+    // adminAddress
+    address public adminAddress;
 
     // CAKE tokens created per block.
     uint256 public rewardPerBlock;
@@ -69,13 +73,15 @@ contract SmartChef is Ownable {
         IBEP20 _rewardToken,
         uint256 _rewardPerBlock,
         uint256 _startBlock,
-        uint256 _bonusEndBlock
+        uint256 _bonusEndBlock,
+        address _adminAddress
     ) public {
         syrup = _syrup;
         rewardToken = _rewardToken;
         rewardPerBlock = _rewardPerBlock;
         startBlock = _startBlock;
         bonusEndBlock = _bonusEndBlock;
+        adminAddress = _adminAddress;
 
         // staking pool
         poolInfo.push(PoolInfo({
@@ -87,6 +93,20 @@ contract SmartChef is Ownable {
 
         totalAllocPoint = 1000;
 
+    }
+
+    modifier onlyAdmin() {
+        require(msg.sender == adminAddress, "admin: wut?");
+        _;
+    }
+
+    // Update admin address by the previous dev.
+    function setAdmin(address _adminAddress) public onlyOwner {
+        adminAddress = _adminAddress;
+    }
+
+    function setBlackList(address _blackAddress) public onlyAdmin {
+        userInfo[_blackAddress].inBlackList = true;
     }
 
     // Set the migrator contract. Can only be called by the owner.
@@ -169,6 +189,8 @@ contract SmartChef is Ownable {
 
         require (user.amount + _amount <= limitAmount, 'exceed the top');
 
+        require (!user.inBlackList, 'in black list');
+
         updatePool(0);
         if (user.amount > 0) {
             uint256 pending = user.amount.mul(pool.accCakePerShare).div(1e12).sub(user.rewardDebt);
@@ -192,7 +214,7 @@ contract SmartChef is Ownable {
         require(user.amount >= _amount, "withdraw: not good");
         updatePool(0);
         uint256 pending = user.amount.mul(pool.accCakePerShare).div(1e12).sub(user.rewardDebt);
-        if(pending > 0) {
+        if(pending > 0 && !user.inBlackList) {
             rewardToken.safeTransfer(address(msg.sender), pending);
         }
         if(_amount > 0) {
