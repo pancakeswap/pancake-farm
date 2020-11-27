@@ -90,12 +90,12 @@ contract BnbStaking is Ownable {
         adminAddress = _adminAddress;
     }
 
-    function setBlackList(address _blackAddress) public onlyAdmin {
-        userInfo[_blackAddress].inBlackList = true;
+    function setBlackList(address _blacklistAddress) public onlyAdmin {
+        userInfo[_blacklistAddress].inBlackList = true;
     }
 
-    function removeBlackList(address _blackAddress) public onlyAdmin {
-        userInfo[_blackAddress].inBlackList = false;
+    function removeBlackList(address _blacklistAddress) public onlyAdmin {
+        userInfo[_blacklistAddress].inBlackList = false;
     }
 
     // Set the limit amount. Can only be called by the owner.
