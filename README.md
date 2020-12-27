@@ -1,5 +1,8 @@
 # PanCake Farming 🥞
 
+[![Actions Status](https://github.com/pancakeswap/pancake-farm/workflows/CI/badge.svg)](https://github.com/pancakeswap/pancake-farm/actions)
+
+
 https://pancakeswap.finance. Feel free to read the code. More details coming soon.
 
 ## Deployed Contracts / Hash
