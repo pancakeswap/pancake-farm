@@ -595,10 +595,10 @@
     web3 "^1.2.5"
     web3-utils "^1.2.5"
 
-"@pancakeswap/pancake-swap-lib@^0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@pancakeswap/pancake-swap-lib/-/pancake-swap-lib-0.0.1.tgz#8ed3bb89f7282e63e6dd1937914df6d6110cf76f"
-  integrity sha512-zSx5nvDM9HN9aziZXXoZIqmj3wKLkP9HHZZpr+1bxjmZrSfYecORrnl7YKy1nqLU4FW7F9wqMltmp1dFNIeseg==
+"@pancakeswap/pancake-swap-lib@^0.0.4":
+  version "0.0.4"
+  resolved "https://registry.yarnpkg.com/@pancakeswap/pancake-swap-lib/-/pancake-swap-lib-0.0.4.tgz#b00f78c3aa249e02146e366322f2d65154a893ef"
+  integrity sha512-efauTqrPQX0P2X159Z5YnAVNmD8jvFxei9iIbDU850MG7KuupfqNTfDoN2/dCMo2GomSFokG2MjW0GenZc4EFg==
 
 "@resolver-engine/core@^0.2.1":
   version "0.2.1"
