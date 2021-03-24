@@ -2,7 +2,7 @@ const { expectRevert, time } = require('@openzeppelin/test-helpers');
 const CakeToken = artifacts.require('CakeToken');
 const SyrupBar = artifacts.require('SyrupBar');
 const MasterChef = artifacts.require('MasterChef');
-const MockBEP20 = artifacts.require('MockBEP20');
+const MockBEP20 = artifacts.require('libs/MockBEP20');
 
 contract('MasterChef', ([alice, bob, carol, dev, minter]) => {
     beforeEach(async () => {
@@ -39,8 +39,9 @@ contract('MasterChef', ([alice, bob, carol, dev, minter]) => {
       await this.chef.add('500', this.lp3.address, true, { from: minter });
       await this.chef.add('100', this.lp3.address, true, { from: minter });
       await this.chef.add('100', this.lp3.address, true, { from: minter });
+      assert.equal((await this.chef.poolLength()).toString(), "10");
 
-      await time.advanceBlockTo('100');
+      await time.advanceBlockTo('170');
       await this.lp1.approve(this.chef.address, '1000', { from: alice });
       assert.equal((await this.cake.balanceOf(alice)).toString(), '0');
       await this.chef.deposit(1, '20', { from: alice });
@@ -79,9 +80,8 @@ contract('MasterChef', ([alice, bob, carol, dev, minter]) => {
       assert.equal((await this.lp1.balanceOf(bob)).toString(), '1950');
       await this.chef.deposit(1, '0', { from: bob });
       assert.equal((await this.cake.balanceOf(bob)).toString(), '125');
-
-
-
+      await this.chef.emergencyWithdraw(1, { from: bob });
+      assert.equal((await this.lp1.balanceOf(bob)).toString(), '2000');
     })
 
     it('staking/unstaking', async () => {
@@ -134,7 +134,7 @@ contract('MasterChef', ([alice, bob, carol, dev, minter]) => {
       assert.equal((await this.cake.balanceOf(alice)).toString(), '700');
       assert.equal((await this.cake.balanceOf(bob)).toString(), '150');
 
-      await time.advanceBlockTo('200');
+      await time.advanceBlockTo('265');
 
       await this.chef.enterStaking('0', { from: alice });
       await this.chef.enterStaking('0', { from: bob });
