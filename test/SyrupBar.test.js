@@ -15,7 +15,7 @@ contract('SyrupBar', ([alice, bob, carol, dev, minter]) => {
   });
 
   it('burn', async () => {
-    await advanceBlockTo('650');
+    await advanceBlockTo('850');
     await this.syrup.mint(alice, 1000, { from: minter });
     await this.syrup.mint(bob, 1000, { from: minter });
     assert.equal((await this.syrup.totalSupply()).toString(), '2000');

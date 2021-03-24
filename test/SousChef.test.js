@@ -10,7 +10,7 @@ contract('SousChef', ([alice, bob, carol, dev, minter]) => {
     this.syrup = await MockBEP20.new('LPToken', 'LP1', '1000000', {
       from: minter,
     });
-    this.chef = await SousChef.new(this.syrup.address, '40', '300', '400', {
+    this.chef = await SousChef.new(this.syrup.address, '40', '500', '600', {
       from: minter,
     });
   });
@@ -31,7 +31,7 @@ contract('SousChef', ([alice, bob, carol, dev, minter]) => {
       '10'
     );
 
-    await time.advanceBlockTo('300');
+    await time.advanceBlockTo('500');
 
     await this.chef.deposit('30', { from: alice });
     assert.equal(
@@ -43,7 +43,7 @@ contract('SousChef', ([alice, bob, carol, dev, minter]) => {
       '40'
     );
 
-    await time.advanceBlockTo('302');
+    await time.advanceBlockTo('502');
     assert.equal(
       (await this.chef.pendingReward(bob, { from: bob })).toString(),
       '50'
@@ -58,7 +58,7 @@ contract('SousChef', ([alice, bob, carol, dev, minter]) => {
       (await this.syrup.balanceOf(this.chef.address)).toString(),
       '80'
     );
-    await time.advanceBlockTo('304');
+    await time.advanceBlockTo('504');
     //  bob 10, alice 30, carol 40
     assert.equal(
       (await this.chef.pendingReward(bob, { from: bob })).toString(),
@@ -85,7 +85,7 @@ contract('SousChef', ([alice, bob, carol, dev, minter]) => {
       '110'
     );
 
-    await time.advanceBlockTo('307');
+    await time.advanceBlockTo('507');
     assert.equal(
       (await this.chef.pendingReward(bob, { from: bob })).toString(),
       '86'
@@ -98,7 +98,7 @@ contract('SousChef', ([alice, bob, carol, dev, minter]) => {
     await this.chef.withdraw('20', { from: alice }); // 308 bob 40, alice 30, carol 40
     await this.chef.withdraw('30', { from: bob }); // 309  bob 10, alice 30, carol 40
 
-    await time.advanceBlockTo('310');
+    await time.advanceBlockTo('510');
     assert.equal(
       (await this.chef.pendingReward(bob, { from: bob })).toString(),
       '118'
@@ -112,7 +112,8 @@ contract('SousChef', ([alice, bob, carol, dev, minter]) => {
       '80'
     );
 
-    await time.advanceBlockTo('400');
+
+    await time.advanceBlockTo('600');
     assert.equal(
       (await this.chef.pendingReward(bob, { from: bob })).toString(),
       '568'
@@ -126,7 +127,8 @@ contract('SousChef', ([alice, bob, carol, dev, minter]) => {
       '1915'
     );
 
-    await time.advanceBlockTo('420');
+
+    await time.advanceBlockTo('620');
     assert.equal(
       (await this.chef.pendingReward(bob, { from: bob })).toString(),
       '568'
@@ -144,7 +146,7 @@ contract('SousChef', ([alice, bob, carol, dev, minter]) => {
     await this.chef.withdraw('30', { from: alice });
     await expectRevert(this.chef.withdraw('50', { from: carol }), 'not enough');
     await this.chef.deposit('30', { from: carol });
-    await time.advanceBlockTo('450');
+    await time.advanceBlockTo('650');
     assert.equal(
       (await this.chef.pendingReward(bob, { from: bob })).toString(),
       '568'
@@ -185,28 +187,29 @@ contract('SousChef', ([alice, bob, carol, dev, minter]) => {
 
     await this.chef.add('1000', this.lp1.address, true, { from: minter });
     await this.chef.deposit(1, '20', { from: alice });
-    await time.advanceBlockTo('500');
+    await time.advanceBlockTo('700');
     await this.chef.deposit(1, '0', { from: alice });
     await this.chef.add('1000', this.lp1.address, true, { from: minter });
 
     await this.chef.enterStaking('10', { from: alice });
-    await time.advanceBlockTo('510');
+
+    await time.advanceBlockTo('710');
     await this.chef.enterStaking('10', { from: alice });
 
     this.chef2 = await SousChef.new(this.syrup.address, '40', '600', '800', {
       from: minter,
     });
     await this.syrup.approve(this.chef2.address, '10', { from: alice });
-    await time.advanceBlockTo('590');
+    await time.advanceBlockTo('790');
     this.chef2.deposit('10', { from: alice }); //520
-    await time.advanceBlockTo('610');
+    await time.advanceBlockTo('810');
     assert.equal(
       (await this.syrup.balanceOf(this.chef2.address)).toString(),
       '10'
     );
     assert.equal(
       (await this.chef2.pendingReward(alice, { from: alice })).toString(),
-      '400'
+      '320'
     );
   });
 
