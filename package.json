@@ -5,8 +5,8 @@
   "scripts": {
     "migrate": "truffle migrate --network bscTestnet --reset",
     "compile": "truffle compile --network bscTestnet",
-    "test": "npx builder test",
-    "coverage": "npx builder coverage"
+    "test": "npx buidler test",
+    "coverage": "npx buidler coverage"
   },
   "dependencies": {
     "@openzeppelin/test-helpers": "^0.5.6",
