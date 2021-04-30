@@ -58,7 +58,7 @@ contract LotteryRewardPool is Ownable {
     }
 
     // EMERGENCY ONLY.
-    function emergencyWithdraw(IBEP20 _token, uint256 _amount) external onlyOwner {
+    function emergencyWithdraw(uint256 _amount) external onlyOwner {
         cake.safeTransfer(address(msg.sender), _amount);
         emit EmergencyWithdraw(msg.sender, _amount);
     }
