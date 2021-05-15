@@ -107,7 +107,7 @@ contract('MasterChef', ([alice, bob, carol, dev, minter]) => {
     });
 
 
-    it('updaate multiplier', async () => {
+    it('update multiplier', async () => {
       await this.chef.add('1000', this.lp1.address, true, { from: minter });
       await this.chef.add('1000', this.lp2.address, true, { from: minter });
       await this.chef.add('1000', this.lp3.address, true, { from: minter });
