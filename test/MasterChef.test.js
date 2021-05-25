@@ -33,12 +33,12 @@ contract('MasterChef', ([alice, bob, carol, dev, minter]) => {
       await this.chef.add('2000', this.lp1.address, true, { from: minter });
       await this.chef.add('1000', this.lp2.address, true, { from: minter });
       await this.chef.add('500', this.lp3.address, true, { from: minter });
-      await this.chef.add('500', this.lp3.address, true, { from: minter });
-      await this.chef.add('500', this.lp3.address, true, { from: minter });
-      await this.chef.add('500', this.lp3.address, true, { from: minter });
-      await this.chef.add('500', this.lp3.address, true, { from: minter });
-      await this.chef.add('100', this.lp3.address, true, { from: minter });
-      await this.chef.add('100', this.lp3.address, true, { from: minter });
+      await this.chef.add('500', this.lp4.address, true, { from: minter });
+      await this.chef.add('500', this.lp5.address, true, { from: minter });
+      await this.chef.add('500', this.lp6.address, true, { from: minter });
+      await this.chef.add('500', this.lp7.address, true, { from: minter });
+      await this.chef.add('100', this.lp8.address, true, { from: minter });
+      await this.chef.add('100', this.lp9.address, true, { from: minter });
       assert.equal((await this.chef.poolLength()).toString(), "10");
 
       await time.advanceBlockTo('170');
