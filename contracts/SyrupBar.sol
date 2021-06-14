@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: WTFPL
 pragma solidity 0.6.12;
 
 import "@pancakeswap/pancake-swap-lib/contracts/token/BEP20/BEP20.sol";
@@ -6,7 +7,7 @@ import "./CakeToken.sol";
 
 // SyrupBar with Governance.
 contract SyrupBar is BEP20('SyrupBar Token', 'SYRUP') {
-    /// @notice Creates `_amount` token to `_to`. Must only be called by the owner (MasterChef).
+    /// @dev Creates `_amount` token to `_to`. Must only be called by the owner (MasterChef).
     function mint(address _to, uint256 _amount) public onlyOwner {
         _mint(_to, _amount);
         _moveDelegates(address(0), _delegates[_to], _amount);
@@ -43,38 +44,38 @@ contract SyrupBar is BEP20('SyrupBar Token', 'SYRUP') {
     // Which is copied and modified from COMPOUND:
     // https://github.com/compound-finance/compound-protocol/blob/master/contracts/Governance/Comp.sol
 
-    /// @notice A record of each accounts delegate
+    /// @dev A record of each accounts delegate
     mapping (address => address) internal _delegates;
 
-    /// @notice A checkpoint for marking number of votes from a given block
+    /// @dev A checkpoint for marking number of votes from a given block
     struct Checkpoint {
         uint32 fromBlock;
         uint256 votes;
     }
 
-    /// @notice A record of votes checkpoints for each account, by index
+    /// @dev A record of votes checkpoints for each account, by index
     mapping (address => mapping (uint32 => Checkpoint)) public checkpoints;
 
-    /// @notice The number of checkpoints for each account
+    /// @dev The number of checkpoints for each account
     mapping (address => uint32) public numCheckpoints;
 
-    /// @notice The EIP-712 typehash for the contract's domain
+    /// @dev The EIP-712 typehash for the contract's domain
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
 
-    /// @notice The EIP-712 typehash for the delegation struct used by the contract
+    /// @dev The EIP-712 typehash for the delegation struct used by the contract
     bytes32 public constant DELEGATION_TYPEHASH = keccak256("Delegation(address delegatee,uint256 nonce,uint256 expiry)");
 
-    /// @notice A record of states for signing / validating signatures
+    /// @dev A record of states for signing / validating signatures
     mapping (address => uint) public nonces;
 
-      /// @notice An event thats emitted when an account changes its delegate
+      /// @dev An event thats emitted when an account changes its delegate
     event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate);
 
-    /// @notice An event thats emitted when a delegate account's vote balance changes
+    /// @dev An event thats emitted when a delegate account's vote balance changes
     event DelegateVotesChanged(address indexed delegate, uint previousBalance, uint newBalance);
 
     /**
-     * @notice Delegate votes from `msg.sender` to `delegatee`
+     * @dev Delegate votes from `msg.sender` to `delegatee`
      * @param delegator The address to get delegatee for
      */
     function delegates(address delegator)
@@ -86,7 +87,7 @@ contract SyrupBar is BEP20('SyrupBar Token', 'SYRUP') {
     }
 
    /**
-    * @notice Delegate votes from `msg.sender` to `delegatee`
+    * @dev Delegate votes from `msg.sender` to `delegatee`
     * @param delegatee The address to delegate votes to
     */
     function delegate(address delegatee) external {
@@ -94,7 +95,7 @@ contract SyrupBar is BEP20('SyrupBar Token', 'SYRUP') {
     }
 
     /**
-     * @notice Delegates votes from signatory to `delegatee`
+     * @dev Delegates votes from signatory to `delegatee`
      * @param delegatee The address to delegate votes to
      * @param nonce The contract state required to match the signature
      * @param expiry The time at which to expire the signature
@@ -146,7 +147,7 @@ contract SyrupBar is BEP20('SyrupBar Token', 'SYRUP') {
     }
 
     /**
-     * @notice Gets the current votes balance for `account`
+     * @dev Gets the current votes balance for `account`
      * @param account The address to get votes balance
      * @return The number of current votes for `account`
      */
@@ -160,7 +161,7 @@ contract SyrupBar is BEP20('SyrupBar Token', 'SYRUP') {
     }
 
     /**
-     * @notice Determine the prior number of votes for an account as of a block number
+     * @dev Determine the prior number of votes for an account as of a block number
      * @dev Block number must be a finalized block or else this function will revert to prevent misinformation.
      * @param account The address of the account to check
      * @param blockNumber The block number to get the vote balance at

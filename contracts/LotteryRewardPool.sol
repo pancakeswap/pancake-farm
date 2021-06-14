@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: WTFPL
 pragma solidity 0.6.12;
 
 import '@pancakeswap/pancake-swap-lib/contracts/token/BEP20/IBEP20.sol';
@@ -58,7 +59,7 @@ contract LotteryRewardPool is Ownable {
     }
 
     // EMERGENCY ONLY.
-    function emergencyWithdraw(IBEP20 _token, uint256 _amount) external onlyOwner {
+    function emergencyWithdraw(uint256 _amount) external onlyOwner {
         cake.safeTransfer(address(msg.sender), _amount);
         emit EmergencyWithdraw(msg.sender, _amount);
     }
