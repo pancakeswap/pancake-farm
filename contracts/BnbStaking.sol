@@ -51,7 +51,7 @@ contract BnbStaking is Ownable {
     mapping (address => UserInfo) public userInfo;
     // limit 10 BNB here
     uint256 public limitAmount = 10000000000000000000;
-    // Total allocation poitns. Must be the sum of all allocation points in all pools.
+    // Total allocation points. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint = 0;
     // The block number when CAKE mining starts.
     uint256 public startBlock;
